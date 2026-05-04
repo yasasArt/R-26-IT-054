@@ -1,0 +1,125 @@
+/* app/globals.css */
+@import "tailwindcss";
+
+:root {
+  /* Surface hierarchy */
+  --bg: #0b1017;
+  --surface: #131b26;
+  --card: #1a2536;
+  --card-border: #243044;
+  --dim: #3a4a5c;
+
+  /* Text */
+  --text: #e8ecf1;
+  --muted: #6b7a8d;
+
+  /* Status */
+  --accent: #3b82f6;
+  --green: #22c55e;
+  --yellow: #facc15;
+  --red: #ef4444;
+  --orange: #f97316;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-space-grotesk), sans-serif;
+}
+
+/* Scrollbar styling for dark dashboard */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--dim);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Mono utility for KPI values */
+.font-data {
+  font-family: var(--font-ibm-plex-mono), monospace;
+}
+
+/* Status dot glow helpers */
+.dot-live {
+  box-shadow: 0 0 8px var(--green);
+}
+
+.dot-warning {
+  box-shadow: 0 0 8px var(--yellow);
+}
+
+.dot-error {
+  box-shadow: 0 0 8px var(--red);
+}
+
+.dot-inactive {
+  box-shadow: none;
+}
+
+/* Animated scan line for camera placeholder */
+@keyframes scanline {
+  0% { top: -10%; }
+  100% { top: 110%; }
+}
+
+.camera-scanline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(59, 130, 246, 0.6),
+    transparent
+  );
+  animation: scanline 3s linear infinite;
+}
+
+/* Fade in utility */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Count flash — fires when a number updates */
+@keyframes countFlash {
+  0% { color: var(--green); transform: scale(1.08); }
+  100% { color: inherit; transform: scale(1); }
+}
+
+.count-flash {
+  animation: countFlash 0.4s ease-out;
+}
