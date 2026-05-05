@@ -4,23 +4,45 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Clock } from "lucide-react";
 import { useWorkstationStore } from "@/store/workstationStore";
-import { useSewingStore } from "@/store/sewingStore";
-import { useQualityStore } from "@/store/qualityStore";
-import { ModeIndicator } from "./ModeIndicator";
-import { SessionTimer } from "./SessionTimer";
-import { StatusDot } from "@/components/ui/StatusDot";
-import { cn } from "@/lib/utils";
-import type { DotStatus } from "@/components/ui/StatusDot";
+import { useSewingStore }      from "@/store/sewingStore";
+import { useQualityStore }     from "@/store/qualityStore";
+import { SessionTimer }        from "./SessionTimer";
+import { cn }                  from "@/lib/utils";
 
-function Divider() {
-  return <div className="w-px h-4 bg-card-border flex-shrink-0" />;
+function VBar() {
+  return (
+    <div className="shrink-0" style={{ width: 1, height: 16, background: "#243044" }} />
+  );
+}
+
+function StatusDot({
+  ok, pulse, label, value,
+}: {
+  ok: boolean; pulse?: boolean; label: string; value?: string;
+}) {
+  const color = ok ? "#22C55E" : "#EF4444";
+  return (
+    <div className="flex items-center gap-1.5">
+      <div
+        className={cn("rounded-full shrink-0", pulse && "animate-pulse-slow")}
+        style={{ width: 6, height: 6, background: color, boxShadow: `0 0 5px ${color}` }}
+      />
+      <span className="font-mono text-text-muted" style={{ fontSize: 10 }}>
+        {label}
+      </span>
+      {value && (
+        <span className="font-mono" style={{ fontSize: 10, color: ok ? "#22C55E" : "#EF4444" }}>
+          {value}
+        </span>
+      )}
+    </div>
+  );
 }
 
 export function TopBar() {
   const { config, sessionStartTime } = useWorkstationStore();
-  const sewingStore = useSewingStore();
-  const qualityStore = useQualityStore();
-
+  const sewing  = useSewingStore();
+  const quality = useQualityStore();
   const [clock, setClock] = useState("");
 
   useEffect(() => {
@@ -31,81 +53,76 @@ export function TopBar() {
   }, []);
 
   const mode = config.mode;
+  const camStatus = mode === "sewing" ? sewing.cameraStatus : quality.cameraStatus;
+  const camOk     = camStatus === "live" || camStatus === "calibrating";
+  const iotOk     = mode === "sewing" && sewing.iotStatus === "connected";
 
-  // Derive camera status dot
-  const rawCameraStatus =
-    mode === "sewing" ? sewingStore.cameraStatus : qualityStore.cameraStatus;
-
-  const cameraDotStatus: DotStatus =
-    rawCameraStatus === "live" ? "live"
-    : rawCameraStatus === "calibrating" ? "calibrating"
-    : "disconnected";
-
-  // IoT dot — sewing only
-  const iotDotStatus: DotStatus | null =
-    mode === "sewing"
-      ? sewingStore.iotStatus === "connected"
-        ? "live"
-        : "disconnected"
-      : null;
+  const modeColor = mode === "sewing" ? "#22C55E" : mode === "quality" ? "#3B82F6" : "#6B7A8D";
+  const modeLabel =
+    mode === "sewing"  ? "Sewing Operator Area"
+    : mode === "quality" ? "Quality Checker Area"
+    : "No Mode Selected";
 
   return (
-    <header className="h-14 bg-card border-b border-card-border flex items-center px-5 gap-4 flex-shrink-0">
-      {/* Mode badge — left anchor */}
-      <div className="flex-1 flex items-center">
-        {mode && <ModeIndicator mode={mode} size="sm" />}
+    <header
+      className="flex items-center px-5 gap-4 shrink-0"
+      style={{ height: 56, background: "#1A2536", borderBottom: "1px solid #243044" }}
+    >
+      {/* Left: current mode label */}
+      <div className="flex-1 flex items-center gap-2">
+        <div
+          className="rounded-full shrink-0 animate-pulse-slow"
+          style={{ width: 6, height: 6, background: modeColor, boxShadow: `0 0 6px ${modeColor}` }}
+        />
+        <span
+          className="font-mono font-semibold uppercase tracking-wider"
+          style={{ fontSize: 10, color: modeColor }}
+        >
+          {modeLabel}
+        </span>
       </div>
 
       {/* Right: status row */}
       <div className="flex items-center gap-3.5">
         {/* Camera */}
-        <div className="flex items-center gap-1.5">
-          <StatusDot status={cameraDotStatus} size="sm" />
-          <span className="text-[11px] font-mono text-text-muted">
-            {config.cameraLabel}
-          </span>
-        </div>
+        <StatusDot ok={camOk} pulse={camOk} label="Camera" value={camOk ? "Live" : "Offline"} />
 
         {/* IoT — sewing only */}
-        {iotDotStatus && (
+        {mode === "sewing" && (
           <>
-            <Divider />
-            <div className="flex items-center gap-1.5">
-              <StatusDot status={iotDotStatus} size="sm" />
-              <span className="text-[11px] font-mono text-text-muted">
-                IoT
-              </span>
-            </div>
+            <VBar />
+            <StatusDot ok={iotOk} pulse={iotOk} label="IoT" value={iotOk ? "Paired" : "Offline"} />
           </>
         )}
 
-        <Divider />
+        <VBar />
 
         {/* Session timer */}
-        <SessionTimer
-          startTime={sessionStartTime}
-          showLabel
-        />
+        <SessionTimer startTime={sessionStartTime} showLabel />
 
-        <Divider />
+        <VBar />
 
         {/* Wall clock */}
         <div className="flex items-center gap-1.5">
-          <Clock size={11} className="text-text-muted flex-shrink-0" />
+          <Clock size={11} className="text-text-muted shrink-0" />
           <span
-            className={cn(
-              "text-sm font-mono tabular-nums",
-              clock ? "text-text-primary" : "text-dim"
-            )}
+            className="font-mono tabular-nums"
+            style={{ fontSize: 14, color: clock ? "#E8ECF1" : "#3A4A5C" }}
           >
             {clock || "──:──:──"}
           </span>
         </div>
 
-        <Divider />
+        <VBar />
 
-        {/* Station ID chip */}
-        <span className="text-[11px] font-mono text-text-muted bg-surface border border-card-border rounded px-2 py-0.5">
+        {/* Station chip */}
+        <span
+          className="font-mono text-text-muted rounded"
+          style={{
+            fontSize: 11, padding: "3px 10px",
+            background: "#131B26", border: "1px solid #243044",
+          }}
+        >
           {config.stationId}
         </span>
       </div>

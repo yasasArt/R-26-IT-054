@@ -249,7 +249,7 @@ function QualityCardVisual() {
       />
 
       <div
-        className="relative overflow-hidden flex-shrink-0"
+        className="relative overflow-hidden shrink-0"
         style={{
           width: 156, margin: 14, background: "#0A0E14",
           border: "1px solid #243044", borderRadius: 9,
@@ -337,7 +337,7 @@ function QualityCardVisual() {
               [{ h: "#1E3A5F" }, { h: "#F8F8F8" }].map((c, i) => (
                 <div
                   key={i}
-                  className="rounded-full flex-shrink-0 animate-fade-in"
+                  className="rounded-full shrink-0 animate-fade-in"
                   style={{
                     width: 20, height: 20, background: c.h,
                     border: "1px solid #243044", boxShadow: `0 0 7px ${c.h}55`,
@@ -482,7 +482,7 @@ function StepModeSelect({
                   </div>
                   {sel && (
                     <div
-                      className="flex items-center justify-center flex-shrink-0 animate-fade-in"
+                      className="flex items-center justify-center shrink-0 animate-fade-in"
                       style={{ width: 22, height: 22, borderRadius: "50%", background: card.color }}
                     >
                       <svg
@@ -509,7 +509,7 @@ function StepModeSelect({
                       style={{ fontSize: 12.5, marginBottom: 9, lineHeight: 1.4 }}
                     >
                       <div
-                        className="rounded-full flex-shrink-0 transition-colors duration-200"
+                        className="rounded-full shrink-0 transition-colors duration-200"
                         style={{
                           width: 4, height: 4,
                           marginTop: 5,
@@ -1126,7 +1126,7 @@ function StepSession({
               gap: 10,
             }}
           >
-            <Clock size={12} className="text-text-muted flex-shrink-0" />
+            <Clock size={12} className="text-text-muted shrink-0" />
             <div>
               <div className="font-mono text-dim uppercase" style={{ fontSize: 8, letterSpacing: "0.09em" }}>
                 Start Time
@@ -1296,7 +1296,7 @@ export default function SetupPage() {
       />
 
       <header
-        className="flex items-center justify-between flex-shrink-0 relative z-10"
+        className="flex items-center justify-between shrink-0 relative z-10"
         style={{
           height: 60,
           padding: "0 40px",
