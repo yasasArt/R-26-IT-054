@@ -1,4 +1,3 @@
-// tailwind.config.ts
 import type { Config } from "tailwindcss";
 
 const config: Config = {
@@ -11,23 +10,23 @@ const config: Config = {
     extend: {
       colors: {
         // Surface hierarchy
-        bg: "#0B1017",
-        surface: "#131B26",
-        card: "#1A2536",
-        "card-border": "#243044",
-        dim: "#3A4A5C",
+        bg: "var(--bg)",
+        surface: "var(--surface)",
+        card: "var(--card)",
+        "card-border": "var(--card-border)",
+        dim: "var(--dim)",
 
         // Text
-        "text-primary": "#E8ECF1",
-        "text-muted": "#6B7A8D",
-        "text-dim": "#3A4A5C",
+        "text-primary": "var(--text)",
+        "text-muted": "var(--muted)",
+        "text-dim": "var(--dim)",
 
         // Status / accent
-        accent: "#3B82F6",
-        success: "#22C55E",
-        warning: "#FACC15",
-        danger: "#EF4444",
-        orange: "#F97316",
+        accent: "var(--accent)",
+        success: "var(--green)",
+        warning: "var(--yellow)",
+        danger: "var(--red)",
+        orange: "var(--orange)",
 
         // Mode colors
         "sewing-primary": "#22C55E",

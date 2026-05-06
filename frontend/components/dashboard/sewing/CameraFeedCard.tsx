@@ -16,7 +16,7 @@ function SignalChip({
       style={{
         padding: "7px 12px",
         background: active ? `${color}12` : "rgba(255,255,255,0.02)",
-        border: `1px solid ${active ? color : "#3A4A5C"}`,
+        border: `1px solid ${active ? color : "var(--dim)"}`,
         boxShadow: active ? `0 0 10px ${color}28` : "none",
         minWidth: 100,
       }}
@@ -25,20 +25,20 @@ function SignalChip({
         className={cn("rounded-full shrink-0", active && "animate-pulse-slow")}
         style={{
           width: 7, height: 7,
-          background: active ? color : "#3A4A5C",
+          background: active ? color : "var(--dim)",
           boxShadow: active ? `0 0 5px ${color}` : "none",
         }}
       />
       <div>
         <div
           className="font-mono font-bold"
-          style={{ fontSize: 11, color: active ? color : "#3A4A5C", letterSpacing: "0.06em" }}
+          style={{ fontSize: 11, color: active ? color : "var(--dim)", letterSpacing: "0.06em" }}
         >
           {id}
         </div>
         <div
           className="font-mono"
-          style={{ fontSize: 8, color: active ? `${color}99` : "#3A4A5C" }}
+          style={{ fontSize: 8, color: active ? `${color}99` : "var(--dim)" }}
         >
           {desc}
         </div>
@@ -93,12 +93,12 @@ export function CameraFeedCard() {
   return (
     <div
       className="flex flex-col overflow-hidden"
-      style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}
+      style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}
     >
       {/* Card header */}
       <div
         className="flex items-center justify-between px-5 shrink-0"
-        style={{ height: 54, background: "#131B26", borderBottom: "1px solid #243044" }}
+        style={{ height: 54, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}
       >
         <div className="flex items-center gap-3">
           <div
@@ -146,7 +146,7 @@ export function CameraFeedCard() {
       {/* Camera view — flex-1 fills remaining card height */}
       <div
         className="relative overflow-hidden"
-        style={{ flex: 1, minHeight: 190, background: "#060A0F" }}
+        style={{ flex: 1, minHeight: 190, background: "var(--camera-bg)" }}
       >
         {/* CRT texture */}
         <div
@@ -286,7 +286,7 @@ export function CameraFeedCard() {
           className="absolute flex items-center gap-1.5"
           style={{
             bottom: 8, left: 8,
-            background: "rgba(0,0,0,0.72)", border: "1px solid #243044",
+            background: "rgba(0,0,0,0.72)", border: "1px solid var(--card-border)",
             borderRadius: 5, padding: "3px 9px",
           }}
         >
@@ -304,7 +304,7 @@ export function CameraFeedCard() {
       {/* Dual-signal strip */}
       <div
         className="flex items-center gap-3 px-5 shrink-0"
-        style={{ height: 62, borderTop: "1px solid #243044" }}
+        style={{ height: 62, borderTop: "1px solid var(--card-border)" }}
       >
         <span
           className="font-mono text-dim uppercase shrink-0"
@@ -322,7 +322,7 @@ export function CameraFeedCard() {
         <svg width="16" height="10" viewBox="0 0 16 10" className="shrink-0">
           <path
             d="M0 5H11M7.5 1.5L12 5L7.5 8.5"
-            stroke={bothFired ? "#22C55E" : "#3A4A5C"}
+            stroke={bothFired ? "#22C55E" : "var(--dim)"}
             strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"
           />
         </svg>
@@ -334,8 +334,8 @@ export function CameraFeedCard() {
             fontSize: 10, letterSpacing: "0.06em",
             padding: "6px 12px", borderRadius: 8,
             background: bothFired ? "rgba(34,197,94,0.14)" : "rgba(255,255,255,0.02)",
-            border: `1px solid ${bothFired ? "#22C55E" : "#3A4A5C"}`,
-            color: bothFired ? "#22C55E" : "#3A4A5C",
+            border: `1px solid ${bothFired ? "#22C55E" : "var(--dim)"}`,
+            color: bothFired ? "#22C55E" : "var(--dim)",
             boxShadow: bothFired ? "0 0 12px rgba(34,197,94,0.3)" : "none",
           }}
         >
@@ -352,7 +352,7 @@ export function CameraFeedCard() {
           className="ml-auto flex items-center gap-1.5 font-mono text-text-muted shrink-0"
           style={{
             fontSize: 8, padding: "4px 9px", borderRadius: 6,
-            background: "#0B1017", border: "1px solid #243044",
+            background: "var(--bg)", border: "1px solid var(--card-border)",
           }}
         >
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

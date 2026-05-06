@@ -3,23 +3,23 @@
 import { useQualityStore } from "@/store/qualityStore";
 
 const SIZE_COLOR: Record<string, string> = {
-  S: "#3B82F6", M: "#22C55E", L: "#FACC15", XL: "#F97316", Unknown: "#3A4A5C",
+  S: "#3B82F6", M: "#22C55E", L: "#FACC15", XL: "#F97316", Unknown: "var(--dim)",
 };
 
 export function SizeResultCard() {
   const { currentGarment } = useQualityStore();
   const m = currentGarment?.sizeMeasurement;
-  const sizeColor = m ? (SIZE_COLOR[m.detectedSize] ?? "#3A4A5C") : "#3A4A5C";
+  const sizeColor = m ? (SIZE_COLOR[m.detectedSize] ?? "var(--dim)") : "var(--dim)";
 
   return (
     <div
       className="flex flex-col overflow-hidden"
-      style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}
+      style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 shrink-0"
-        style={{ height: 48, background: "#131B26", borderBottom: "1px solid #243044" }}
+        style={{ height: 48, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}
       >
         <span className="font-mono text-text-muted uppercase" style={{ fontSize: 9, letterSpacing: "0.14em" }}>
           Size Measurement
@@ -57,7 +57,7 @@ export function SizeResultCard() {
 
         {/* Confidence bar */}
         {m && (
-          <div className="rounded-full overflow-hidden" style={{ height: 4, background: "#243044" }}>
+          <div className="rounded-full overflow-hidden" style={{ height: 4, background: "var(--card-border)" }}>
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
@@ -70,13 +70,13 @@ export function SizeResultCard() {
 
         {/* Width + Height */}
         <div className="grid grid-cols-2 gap-2">
-          <div style={{ background: "#0B1017", border: "1px solid #243044", borderRadius: 7, padding: "11px 13px" }}>
+          <div style={{ background: "var(--bg)", border: "1px solid var(--card-border)", borderRadius: 7, padding: "11px 13px" }}>
             <div className="font-mono text-dim uppercase" style={{ fontSize: 7.5, letterSpacing: "0.09em", marginBottom: 5 }}>Width</div>
             <div className="font-mono font-semibold text-warning" style={{ fontSize: 14 }}>
               {m ? `${m.widthCm.toFixed(1)} cm` : "—"}
             </div>
           </div>
-          <div style={{ background: "#0B1017", border: "1px solid #243044", borderRadius: 7, padding: "11px 13px" }}>
+          <div style={{ background: "var(--bg)", border: "1px solid var(--card-border)", borderRadius: 7, padding: "11px 13px" }}>
             <div className="font-mono text-dim uppercase" style={{ fontSize: 7.5, letterSpacing: "0.09em", marginBottom: 5 }}>Height</div>
             <div className="font-mono font-semibold text-accent" style={{ fontSize: 14 }}>
               {m ? `${m.heightCm.toFixed(1)} cm` : "—"}

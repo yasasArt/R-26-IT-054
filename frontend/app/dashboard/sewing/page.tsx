@@ -1,243 +1,122 @@
-// app/dashboard/sewing/page.tsx
 "use client";
-import { useSewingStore }        from "@/store/sewingStore";
-import { useWorkstationStore }   from "@/store/workstationStore";
-import { useSewingSimulator }    from "@/lib/hooks/useSewingSimulator";
-import { CameraFeedCard }        from "@/components/dashboard/sewing/CameraFeedCard";
-import { OperatorStatusCard }    from "@/components/dashboard/sewing/OperatorStatusCard";
-import { ReworkCard }            from "@/components/dashboard/sewing/ReworkCard";
-import { DowntimeCard }          from "@/components/dashboard/sewing/DowntimeCard";
-import { IoTCard }               from "@/components/dashboard/sewing/IoTCard";
-import { ShiftSummaryCard }      from "@/components/dashboard/sewing/ShiftSummaryCard";
-import { EventTicker }           from "@/components/dashboard/sewing/EventTicker";
-import { DetectionLog }          from "@/components/dashboard/sewing/DetectionLog";
-import { PieceCountChart }       from "@/components/charts/PieceCountChart";
-import { CycleTimeChart }        from "@/components/charts/CycleTimeChart";
-import { HourlyChart }           from "@/components/charts/HourlyChart";
-import { getCycleTimeColor }     from "@/lib/utils";
-import { CYCLE_TIME }            from "@/lib/constants";
 
-// ── KPI Tile (private to page) ────────────────────────────────────
-function KPITile({
-  label, value, unit, sub, subColor, valueColor, flash, badge,
-}: {
-  label:      string;
-  value:      string | number;
-  unit?:      string;
-  sub?:       string;
-  subColor?:  string;
-  valueColor?: string;
-  flash?:     boolean;
-  badge?:     { text: string; color: string };
-}) {
+import type { ReactNode } from "react";
+import { AlertTriangle, CheckCircle2, TimerReset } from "lucide-react";
+import { useSewingSimulator } from "@/lib/hooks/useSewingSimulator";
+import { CYCLE_TIME } from "@/lib/constants";
+import { formatDuration, formatTime } from "@/lib/utils";
+import { useSewingStore } from "@/store/sewingStore";
+import { useWorkstationStore } from "@/store/workstationStore";
+import { CameraFrame, DataTable, MetricCard, MiniBarChart, PageHeader, Panel, StatusPill } from "@/components/industrial/Primitives";
+
+export default function SewingDashboardPage() {
+  useSewingSimulator("1x");
+
+  const { config } = useWorkstationStore();
+  const sewing = useSewingStore();
+  const progress = Math.min(Math.round((sewing.pieceCount / config.shiftTarget) * 100), 100);
+  const recentCycles = sewing.cycleHistory.slice(-12).map(item => item.durationSeconds);
+  const currentTone = sewing.currentCycleTimeSeconds <= CYCLE_TIME.TARGET_SECONDS ? "ok" : sewing.currentCycleTimeSeconds <= CYCLE_TIME.WARNING_SECONDS ? "warn" : "bad";
+
   return (
-    <div
-      className="flex flex-col overflow-hidden"
-      style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}
-    >
-      {/* Card header */}
-      <div
-        className="flex items-center justify-between px-4 shrink-0"
-        style={{ height: 36, background: "#131B26", borderBottom: "1px solid #243044" }}
-      >
-        <span className="font-mono text-text-muted uppercase" style={{ fontSize: 8.5, letterSpacing: "0.14em" }}>
-          {label}
-        </span>
-        {badge && (
-          <span
-            className="font-mono font-bold uppercase"
-            style={{
-              fontSize: 7, letterSpacing: "0.08em",
-              padding: "2px 7px", borderRadius: 4,
-              background: `${badge.color}14`,
-              border: `1px solid ${badge.color}35`,
-              color: badge.color,
-            }}
-          >
-            {badge.text}
-          </span>
-        )}
+    <div className="animate-in">
+      <PageHeader
+        eyebrow="Feature 2 | Sewing operator area"
+        title="Live production monitor"
+        description="Camera-based output zone monitoring with dual-signal piece counting, operator cycle-time analysis, and IoT-driven rework/downtime handling."
+        actions={<StatusPill label="Simulated live feed" tone="ok" pulse />}
+      />
+
+      <div className="grid grid-4">
+        <MetricCard label="Total pieces" value={sewing.pieceCount} sub={`${config.shiftTarget} pcs shift target`} tone="ok" badge={`${progress}%`} />
+        <MetricCard label="Current cycle" value={sewing.currentCycleTimeSeconds || "—"} unit={sewing.currentCycleTimeSeconds ? "s" : ""} sub={`Target ${CYCLE_TIME.TARGET_SECONDS}s`} tone={currentTone} />
+        <MetricCard label="Average cycle" value={sewing.averageCycleTimeSeconds ? sewing.averageCycleTimeSeconds.toFixed(1) : "—"} unit="s" sub="Rolling detected pieces" tone="info" />
+        <MetricCard label="Downtime" value={formatDuration(sewing.totalDowntimeSeconds)} sub={`${sewing.totalReworkCount} rework events`} tone={sewing.downtimeActive ? "bad" : "muted"} badge={sewing.operatorStatus} />
       </div>
 
-      {/* Value */}
-      <div style={{ padding: "12px 16px 14px", flex: 1 }}>
-        <div className="flex items-end gap-1.5" style={{ marginBottom: 4 }}>
-          <span
-            key={`${label}-${value}`}
-            className="font-mono font-bold"
-            style={{
-              fontSize: 36,
-              color: valueColor || "#E8ECF1",
-              lineHeight: 1,
-              letterSpacing: "-0.02em",
-              animation: flash ? "countUp 0.3s ease-out" : "none",
-            }}
-          >
-            {value}
-          </span>
-          {unit && (
-            <span className="font-mono text-text-muted pb-1" style={{ fontSize: 14 }}>
-              {unit}
-            </span>
-          )}
+      <div className="grid monitor-grid" style={{ marginTop: 16 }}>
+        <Panel title="Output Zone Camera" eyebrow="YOLOv8 + pose verification" action={<StatusPill label={sewing.cameraStatus} tone="ok" pulse />}>
+          <CameraFrame mode="sewing">
+            <div style={{ position: "absolute", inset: "82px 18% 72px", border: "2px solid rgba(37, 192, 109, 0.55)", borderRadius: 14 }} />
+            <div style={{ position: "absolute", left: "22%", top: "42%" }}><StatusPill label="Garment stationary" tone={sewing.dualSignal.signalA === "triggered" ? "ok" : "muted"} /></div>
+            <div style={{ position: "absolute", right: "18%", top: "58%" }}><StatusPill label="Wrist withdrew" tone={sewing.dualSignal.signalB === "triggered" ? "ok" : "muted"} /></div>
+            <div className="camera-caption">
+              <StatusPill label={`Signal A ${sewing.dualSignal.signalA}`} tone={sewing.dualSignal.signalA === "triggered" ? "ok" : "muted"} />
+              <StatusPill label={`Signal B ${sewing.dualSignal.signalB}`} tone={sewing.dualSignal.signalB === "triggered" ? "ok" : "muted"} />
+              <StatusPill label={sewing.dualSignal.bothAgreed ? "Count authorised" : "Awaiting agreement"} tone={sewing.dualSignal.bothAgreed ? "ok" : "info"} />
+            </div>
+          </CameraFrame>
+        </Panel>
+
+        <div className="grid">
+          <Panel title="Operator State" eyebrow="Cycle behavior" action={<StatusPill label={sewing.operatorStatus} tone={sewing.operatorStatus === "active" ? "ok" : sewing.operatorStatus === "downtime" ? "bad" : "warn"} />}>
+            <div className="panel-body grid grid-2">
+              <ActionState icon={<CheckCircle2 size={20} />} label="Counting model" value="Ready" tone="ok" />
+              <ActionState icon={<TimerReset size={20} />} label="Cycle timer" value={sewing.currentCycleTimeSeconds ? `${sewing.currentCycleTimeSeconds}s` : "Waiting"} tone="info" />
+              <ActionState icon={<AlertTriangle size={20} />} label="Rework" value={sewing.reworkActive ? "Active" : "Clear"} tone={sewing.reworkActive ? "warn" : "ok"} />
+              <ActionState icon={<AlertTriangle size={20} />} label="Downtime" value={sewing.downtimeActive ? "Active" : "Clear"} tone={sewing.downtimeActive ? "bad" : "ok"} />
+            </div>
+          </Panel>
+
+          <Panel title="IoT Device" eyebrow="ESP32 actions" action={<StatusPill label={sewing.iotStatus} tone={sewing.iotStatus === "connected" ? "ok" : "bad"} />}>
+            <div className="panel-body grid grid-2">
+              <button className="btn" onClick={sewing.reworkActive ? sewing.endRework : sewing.startRework}>{sewing.reworkActive ? "Resolve Rework" : "Trigger Rework"}</button>
+              <button className="btn btn-danger" onClick={sewing.downtimeActive ? sewing.endDowntime : sewing.startDowntime}>{sewing.downtimeActive ? "Resolve Downtime" : "Trigger Downtime"}</button>
+            </div>
+          </Panel>
         </div>
-        {sub && (
-          <div className="font-mono" style={{ fontSize: 10.5, color: subColor || "#6B7A8D" }}>
-            {sub}
+      </div>
+
+      <div className="grid grid-3" style={{ marginTop: 16 }}>
+        <Panel title="Cycle Time Trend" eyebrow="Last 12 detections" className="span-2">
+          <div className="panel-body">
+            <MiniBarChart values={recentCycles.length ? recentCycles : [42, 44, 39, 51, 46, 43, 48, 55]} tone="cyan" />
           </div>
-        )}
+        </Panel>
+        <Panel title="Shift Summary" eyebrow="Local session">
+          <div className="panel-body grid">
+            <SummaryRow label="Target completion" value={`${progress}%`} />
+            <SummaryRow label="Pieces remaining" value={Math.max(config.shiftTarget - sewing.pieceCount, 0)} />
+            <SummaryRow label="Camera channel" value={config.cameraId} />
+            <SummaryRow label="Station" value={config.stationId} />
+          </div>
+        </Panel>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <Panel title="Recent Piece Detection Log" eyebrow="Dual-signal accepted events">
+          <DataTable
+            headers={["Time", "Piece", "Cycle", "Confidence", "Operator", "Signals"]}
+            rows={sewing.detectionLog.slice(0, 9).map(event => [
+              formatTime(new Date(event.timestamp)),
+              `#${event.pieceNumber}`,
+              `${event.cycleTimeSeconds}s`,
+              `${Math.round(event.confidenceScore * 100)}%`,
+              event.operatorStatus,
+              event.signalA && event.signalB ? <StatusPill key="ok" label="A+B" tone="ok" /> : <StatusPill key="wait" label="Pending" tone="warn" />,
+            ])}
+          />
+        </Panel>
       </div>
     </div>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────
-export default function SewingDashboardPage() {
-  const {
-    pieceCount, currentCycleTimeSeconds,
-    averageCycleTimeSeconds, cycleHistory,
-  } = useSewingStore();
-  const { config } = useWorkstationStore();
-
-  // Start simulation
-  useSewingSimulator("1x");
-
-  const target = config.shiftTarget;
-  const pct    = Math.min(Math.round((pieceCount / target) * 100), 100);
-
-  const cycleColor = getCycleTimeColor(
-    currentCycleTimeSeconds,
-    CYCLE_TIME.TARGET_SECONDS,
-    CYCLE_TIME.WARNING_SECONDS,
-    CYCLE_TIME.DANGER_SECONDS,
-  );
-  const avgColor = getCycleTimeColor(
-    averageCycleTimeSeconds,
-    CYCLE_TIME.TARGET_SECONDS,
-    CYCLE_TIME.WARNING_SECONDS,
-    CYCLE_TIME.DANGER_SECONDS,
-  );
-
-  // Trend — last 5 vs previous 5
-  const last5   = cycleHistory.slice(-5);
-  const prev5   = cycleHistory.slice(-10, -5);
-  const recentA = last5.length ? last5.reduce((s, r) => s + r.durationSeconds, 0) / last5.length : 0;
-  const prevA   = prev5.length ? prev5.reduce((s, r) => s + r.durationSeconds, 0) / prev5.length : 0;
-  const trend =
-    prevA === 0 ? "Stable"
-    : recentA < prevA - 1 ? "↓ Improving"
-    : recentA > prevA + 1 ? "↑ Slowing"
-    : "→ Stable";
-  const trendColor =
-    trend.includes("Improving") ? "#22C55E"
-    : trend.includes("Slowing") ? "#FACC15"
-    : "#6B7A8D";
-
-  const cycleStatus =
-    currentCycleTimeSeconds === 0 ? "Waiting…"
-    : currentCycleTimeSeconds <= CYCLE_TIME.TARGET_SECONDS ? "On target ✓"
-    : currentCycleTimeSeconds <= CYCLE_TIME.WARNING_SECONDS ? "Slightly slow"
-    : "Above target";
-
-  const cycleStatusColor =
-    currentCycleTimeSeconds === 0 ? "#3A4A5C"
-    : currentCycleTimeSeconds <= CYCLE_TIME.TARGET_SECONDS ? "#22C55E"
-    : currentCycleTimeSeconds <= CYCLE_TIME.WARNING_SECONDS ? "#FACC15"
-    : "#EF4444";
-
+function ActionState({ icon, label, value, tone }: { icon: ReactNode; label: string; value: string; tone: "ok" | "warn" | "bad" | "info" }) {
   return (
-    <div className="space-y-4 animate-fade-in">
-
-      {/* ══ ROW 1: KPI TILES ════════════════════════════════ */}
-      <div
-        className="grid gap-4"
-        style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}
-      >
-        <KPITile
-          label="Total Pieces"
-          value={pieceCount}
-          sub={`Shift target: ${target} pcs`}
-          subColor="#6B7A8D"
-          flash
-          badge={pct >= 100 ? { text: "Done!", color: "#22C55E" } : undefined}
-        />
-        <KPITile
-          label="Current Cycle"
-          value={currentCycleTimeSeconds || "—"}
-          unit={currentCycleTimeSeconds ? "s" : ""}
-          sub={cycleStatus}
-          subColor={cycleStatusColor}
-          valueColor={currentCycleTimeSeconds ? cycleColor : "#3A4A5C"}
-          badge={{ text: `Target ${CYCLE_TIME.TARGET_SECONDS}s`, color: "#3A4A5C" }}
-        />
-        <KPITile
-          label="Average Cycle"
-          value={averageCycleTimeSeconds ? averageCycleTimeSeconds.toFixed(1) : "—"}
-          unit={averageCycleTimeSeconds ? "s" : ""}
-          sub={trend}
-          subColor={trendColor}
-          valueColor={averageCycleTimeSeconds ? avgColor : "#3A4A5C"}
-        />
-        <KPITile
-          label="Shift Progress"
-          value={pct}
-          unit="%"
-          sub={`${pieceCount} of ${target} pieces`}
-          subColor={pct >= 100 ? "#22C55E" : pct >= 75 ? "#3B82F6" : "#6B7A8D"}
-          valueColor={pct >= 100 ? "#22C55E" : pct >= 75 ? "#3B82F6" : "#E8ECF1"}
-          badge={
-            remaining() > 0
-              ? { text: `${remaining()} left`, color: "#6B7A8D" }
-              : { text: "Complete!", color: "#22C55E" }
-          }
-        />
-      </div>
-
-      {/* ══ ROW 2: CAMERA + STATUS GRID ═════════════════════ */}
-      <div
-        className="grid gap-4"
-        style={{ gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)" }}
-      >
-        {/* Camera feed — flex-col, view area grows to match status grid */}
-        <CameraFeedCard />
-
-        {/* Status 2×2 grid */}
-        <div
-          className="grid gap-4"
-          style={{ gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr" }}
-        >
-          <OperatorStatusCard />
-          <IoTCard />
-          <ReworkCard />
-          <DowntimeCard />
-        </div>
-      </div>
-
-      {/* ══ ROW 3: CHARTS ═══════════════════════════════════ */}
-      <div
-        className="grid gap-4"
-        style={{ gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2fr)" }}
-      >
-        <PieceCountChart />
-        <CycleTimeChart />
-      </div>
-
-      {/* ══ ROW 4: SHIFT SUMMARY + EVENTS + HOURLY ══════════ */}
-      <div
-        className="grid gap-4"
-        style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(0, 3fr) minmax(0, 2fr)" }}
-      >
-        <ShiftSummaryCard />
-        <EventTicker />
-        <HourlyChart />
-      </div>
-
-      {/* ══ ROW 5: DETECTION LOG (full width) ═══════════════ */}
-      <DetectionLog />
+    <div className="panel" style={{ boxShadow: "none", padding: 14 }}>
+      <div className={tone}>{icon}</div>
+      <div className="meta-label" style={{ marginTop: 8 }}>{label}</div>
+      <strong>{value}</strong>
     </div>
   );
+}
 
-  function remaining() {
-    return Math.max(target - pieceCount, 0);
-  }
+function SummaryRow({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: "1px solid var(--line-soft)", paddingBottom: 10 }}>
+      <span className="muted">{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
 }

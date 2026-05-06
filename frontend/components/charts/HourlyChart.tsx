@@ -11,15 +11,15 @@ function groupByHour(records: { timestamp: Date | string }[]) {
   return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([hour, count]) => ({ hour, count, current: hour === now }));
 }
 
-const TT = { background: "#1A2536", border: "1px solid #243044", borderRadius: 8, fontFamily: "var(--font-ibm-plex-mono)", fontSize: 10, color: "#E8ECF1", boxShadow: "0 4px 20px rgba(0,0,0,0.45)" };
+const TT = { background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, fontFamily: "var(--font-ibm-plex-mono)", fontSize: 10, color: "var(--text)", boxShadow: "0 4px 20px rgba(0,0,0,0.45)" };
 
 export function HourlyChart() {
   const { cycleHistory } = useSewingStore();
   const data = groupByHour(cycleHistory);
 
   return (
-    <div className="flex flex-col overflow-hidden" style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}>
-      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 54, background: "#131B26", borderBottom: "1px solid #243044" }}>
+    <div className="flex flex-col overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}>
+      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 54, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}>
         <div>
           <div className="font-display font-semibold text-text-primary" style={{ fontSize: 13 }}>Hourly Output</div>
           <div className="font-mono text-text-muted" style={{ fontSize: 9, marginTop: 2 }}>Pieces per hour · current highlighted</div>
@@ -32,8 +32,8 @@ export function HourlyChart() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 4, right: 14, bottom: 0, left: -14 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="hour" tick={{ fill: "#6B7A8D", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fill: "#6B7A8D", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} />
+              <XAxis dataKey="hour" tick={{ fill: "var(--muted)", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fill: "var(--muted)", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={TT} cursor={{ fill: "rgba(255,255,255,0.03)" }} formatter={(v) => [`${v ?? "—"} pcs`, ""]} isAnimationActive={false} />
               <Bar dataKey="count" radius={[3, 3, 0, 0]} maxBarSize={42} isAnimationActive={false}>
                 {data.map((entry, i) => (

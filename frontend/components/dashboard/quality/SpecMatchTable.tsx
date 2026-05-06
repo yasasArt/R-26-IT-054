@@ -10,12 +10,12 @@ export function SpecMatchTable() {
   return (
     <div
       className="flex flex-col overflow-hidden"
-      style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}
+      style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-5 shrink-0"
-        style={{ height: 48, background: "#131B26", borderBottom: "1px solid #243044" }}
+        style={{ height: 48, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}
       >
         <div className="flex items-center gap-3">
           <span className="font-mono text-text-muted uppercase" style={{ fontSize: 9, letterSpacing: "0.14em" }}>
@@ -47,7 +47,7 @@ export function SpecMatchTable() {
           fontSize: 8, letterSpacing: "0.1em",
           gridTemplateColumns: "1fr 1fr 1fr 38px",
           gap: "0 10px",
-          borderBottom: "1px solid #243044",
+          borderBottom: "1px solid var(--card-border)",
           padding: "10px 20px",
         }}
       >
@@ -78,7 +78,7 @@ export function SpecMatchTable() {
             >
               <span className="text-text-muted capitalize" style={{ fontSize: 11 }}>{r.label}</span>
               <span className="text-text-muted" style={{ fontSize: 11 }}>{r.expected}</span>
-              <span style={{ fontSize: 11, color: r.isMatch ? "#E8ECF1" : "#EF4444" }}>
+              <span style={{ fontSize: 11, color: r.isMatch ? "var(--text)" : "#EF4444" }}>
                 {r.detected}
               </span>
               <div

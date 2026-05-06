@@ -20,12 +20,12 @@ export function InspectionLogTable() {
   return (
     <div
       className="overflow-hidden"
-      style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}
+      style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-5 shrink-0"
-        style={{ height: 48, background: "#131B26", borderBottom: "1px solid #243044" }}
+        style={{ height: 48, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}
       >
         <span className="font-mono text-text-muted uppercase" style={{ fontSize: 9, letterSpacing: "0.14em" }}>
           Inspection Log
@@ -42,7 +42,7 @@ export function InspectionLogTable() {
           fontSize: 8, letterSpacing: "0.1em",
           gridTemplateColumns: "76px 70px 44px 72px 1fr 78px",
           gap: "0 10px",
-          borderBottom: "1px solid #243044",
+          borderBottom: "1px solid var(--card-border)",
           padding: "10px 20px",
         }}
       >
@@ -63,7 +63,7 @@ export function InspectionLogTable() {
         )}
         {rows.map((rec, i) => {
           const g      = rec.garmentAnalysis;
-          const dColor = D_COLOR[rec.decision] ?? "#6B7A8D";
+          const dColor = D_COLOR[rec.decision] ?? "var(--muted)";
           return (
             <div
               key={rec.id}
@@ -113,7 +113,7 @@ export function InspectionLogTable() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: "1px solid #243044" }}>
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: "1px solid var(--card-border)" }}>
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}

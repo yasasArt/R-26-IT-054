@@ -33,9 +33,9 @@ export function EventTicker() {
   useEffect(() => { if (listRef.current) listRef.current.scrollTop = 0; }, [detectionLog.length]);
 
   return (
-    <div className="flex flex-col overflow-hidden" style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}>
+    <div className="flex flex-col overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 48, background: "#131B26", borderBottom: "1px solid #243044" }}>
+      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 48, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}>
         <span className="font-mono text-text-muted uppercase" style={{ fontSize: 9, letterSpacing: "0.14em" }}>Production Events</span>
         <div className="flex items-center gap-1.5">
           <div className="rounded-full animate-pulse-slow" style={{ width: 5, height: 5, background: "#22C55E", boxShadow: "0 0 5px #22C55E" }} />

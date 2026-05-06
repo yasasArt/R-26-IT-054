@@ -21,15 +21,15 @@ export function CalibrationStatusCard() {
     <div
       className="flex flex-col overflow-hidden"
       style={{
-        background: "#1A2536",
-        border: `1px solid ${isCalibrated ? "#243044" : "rgba(239,68,68,0.3)"}`,
+        background: "var(--card)",
+        border: `1px solid ${isCalibrated ? "var(--card-border)" : "rgba(239,68,68,0.3)"}`,
         borderRadius: 12,
       }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 shrink-0"
-        style={{ height: 48, background: "#131B26", borderBottom: "1px solid #243044" }}
+        style={{ height: 48, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}
       >
         <span className="font-mono text-text-muted uppercase" style={{ fontSize: 9, letterSpacing: "0.14em" }}>
           Calibration Status
@@ -71,7 +71,7 @@ export function CalibrationStatusCard() {
             { l: "Camera",           v: calibration.cameraId                     },
             { l: "Last Calibrated",  v: lastTime                                  },
           ].map(({ l, v }) => (
-            <div key={l} style={{ background: "#0B1017", border: "1px solid #243044", borderRadius: 7, padding: "11px 13px" }}>
+            <div key={l} style={{ background: "var(--bg)", border: "1px solid var(--card-border)", borderRadius: 7, padding: "11px 13px" }}>
               <div className="font-mono text-dim uppercase" style={{ fontSize: 7.5, letterSpacing: "0.09em", marginBottom: 5 }}>
                 {l}
               </div>
@@ -85,7 +85,7 @@ export function CalibrationStatusCard() {
           className="text-center rounded font-mono text-dim"
           style={{
             padding: "7px 12px", fontSize: 9,
-            background: "#0B1017", border: "1px solid #243044", borderRadius: 7,
+            background: "var(--bg)", border: "1px solid var(--card-border)", borderRadius: 7,
           }}
         >
           Feature 4 · Pixel-to-centimetre calibration

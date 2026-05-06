@@ -29,7 +29,7 @@ export function GarmentAnalysisPanel() {
   const isLive      = cameraStatus === "live";
   const total       = inspectionLog.length;
   const decision    = currentGarment?.decision ?? null;
-  const decColor    = decision ? D_COLOR[decision] : "#3A4A5C";
+  const decColor    = decision ? D_COLOR[decision] : "var(--dim)";
   const decBg       = decision ? D_BG[decision]    : "transparent";
 
   // Scan line rAF while analysing
@@ -57,12 +57,12 @@ export function GarmentAnalysisPanel() {
   return (
     <div
       className="flex flex-col overflow-hidden"
-      style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}
+      style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}
     >
       {/* ── Header ── */}
       <div
         className="flex items-center justify-between px-5 shrink-0"
-        style={{ height: 58, background: "#131B26", borderBottom: "1px solid #243044" }}
+        style={{ height: 58, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}
       >
         <div className="flex items-center gap-3">
           <div
@@ -128,7 +128,7 @@ export function GarmentAnalysisPanel() {
       {/* ── Camera view ── */}
       <div
         className="relative overflow-hidden"
-        style={{ flex: 1, minHeight: 260, background: "#060A0F" }}
+        style={{ flex: 1, minHeight: 260, background: "var(--camera-bg)" }}
       >
         {/* CRT texture */}
         <div
@@ -234,7 +234,7 @@ export function GarmentAnalysisPanel() {
               >
                 <span
                   className="absolute font-mono"
-                  style={{ fontSize: 7, color: "#FACC15", background: "#060A0F", padding: "0 3px" }}
+                  style={{ fontSize: 7, color: "#FACC15", background: "var(--camera-bg)", padding: "0 3px" }}
                 >
                   {currentGarment.sizeMeasurement.widthCm.toFixed(1)}cm
                 </span>
@@ -281,7 +281,7 @@ export function GarmentAnalysisPanel() {
           className="absolute flex items-center gap-1.5"
           style={{
             bottom: 8, left: 8,
-            background: "rgba(0,0,0,0.72)", border: "1px solid #243044",
+            background: "rgba(0,0,0,0.72)", border: "1px solid var(--card-border)",
             borderRadius: 5, padding: "3px 9px",
           }}
         >
@@ -311,7 +311,7 @@ export function GarmentAnalysisPanel() {
       {/* ── Calibration strip ── */}
       <div
         className="flex items-center justify-between px-5 shrink-0"
-        style={{ height: 42, borderTop: "1px solid #243044", background: "#131B26" }}
+        style={{ height: 42, borderTop: "1px solid var(--card-border)", background: "var(--surface)" }}
       >
         <div className="flex items-center gap-5">
           <div className="flex items-center gap-1.5">
