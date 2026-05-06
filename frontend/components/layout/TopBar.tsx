@@ -1,130 +1,55 @@
-// components/layout/TopBar.tsx
 "use client";
-import { useState, useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { Clock } from "lucide-react";
+import { Camera, Clock, HardDrive, RadioTower } from "lucide-react";
+import { useQualityStore } from "@/store/qualityStore";
+import { useSewingStore } from "@/store/sewingStore";
 import { useWorkstationStore } from "@/store/workstationStore";
-import { useSewingStore }      from "@/store/sewingStore";
-import { useQualityStore }     from "@/store/qualityStore";
-import { SessionTimer }        from "./SessionTimer";
-import { cn }                  from "@/lib/utils";
-
-function VBar() {
-  return (
-    <div className="shrink-0" style={{ width: 1, height: 16, background: "#243044" }} />
-  );
-}
-
-function StatusDot({
-  ok, pulse, label, value,
-}: {
-  ok: boolean; pulse?: boolean; label: string; value?: string;
-}) {
-  const color = ok ? "#22C55E" : "#EF4444";
-  return (
-    <div className="flex items-center gap-1.5">
-      <div
-        className={cn("rounded-full shrink-0", pulse && "animate-pulse-slow")}
-        style={{ width: 6, height: 6, background: color, boxShadow: `0 0 5px ${color}` }}
-      />
-      <span className="font-mono text-text-muted" style={{ fontSize: 10 }}>
-        {label}
-      </span>
-      {value && (
-        <span className="font-mono" style={{ fontSize: 10, color: ok ? "#22C55E" : "#EF4444" }}>
-          {value}
-        </span>
-      )}
-    </div>
-  );
-}
+import { StatusPill } from "@/components/industrial/Primitives";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function TopBar() {
   const { config, sessionStartTime } = useWorkstationStore();
-  const sewing  = useSewingStore();
+  const sewing = useSewingStore();
   const quality = useQualityStore();
   const [clock, setClock] = useState("");
+  const [elapsed, setElapsed] = useState("00:00");
 
   useEffect(() => {
-    const tick = () => setClock(format(new Date(), "HH:mm:ss"));
+    const tick = () => {
+      const now = new Date();
+      setClock(format(now, "HH:mm:ss"));
+      if (sessionStartTime) {
+        const seconds = Math.floor((now.getTime() - new Date(sessionStartTime).getTime()) / 1000);
+        const h = Math.floor(seconds / 3600).toString().padStart(2, "0");
+        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, "0");
+        setElapsed(`${h}:${m}`);
+      }
+    };
     tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [sessionStartTime]);
 
   const mode = config.mode;
-  const camStatus = mode === "sewing" ? sewing.cameraStatus : quality.cameraStatus;
-  const camOk     = camStatus === "live" || camStatus === "calibrating";
-  const iotOk     = mode === "sewing" && sewing.iotStatus === "connected";
-
-  const modeColor = mode === "sewing" ? "#22C55E" : mode === "quality" ? "#3B82F6" : "#6B7A8D";
-  const modeLabel =
-    mode === "sewing"  ? "Sewing Operator Area"
-    : mode === "quality" ? "Quality Checker Area"
-    : "No Mode Selected";
+  const cameraStatus = mode === "quality" ? quality.cameraStatus : sewing.cameraStatus;
+  const iotStatus = sewing.iotStatus;
 
   return (
-    <header
-      className="flex items-center px-5 gap-4 shrink-0"
-      style={{ height: 56, background: "#1A2536", borderBottom: "1px solid #243044" }}
-    >
-      {/* Left: current mode label */}
-      <div className="flex-1 flex items-center gap-2">
-        <div
-          className="rounded-full shrink-0 animate-pulse-slow"
-          style={{ width: 6, height: 6, background: modeColor, boxShadow: `0 0 6px ${modeColor}` }}
-        />
-        <span
-          className="font-mono font-semibold uppercase tracking-wider"
-          style={{ fontSize: 10, color: modeColor }}
-        >
-          {modeLabel}
-        </span>
+    <header className="topbar">
+      <div>
+        <div className="eyebrow">Local workstation</div>
+        <strong>{mode === "quality" ? "Quality Checker Area" : "Sewing Operator Area"}</strong>
       </div>
-
-      {/* Right: status row */}
-      <div className="flex items-center gap-3.5">
-        {/* Camera */}
-        <StatusDot ok={camOk} pulse={camOk} label="Camera" value={camOk ? "Live" : "Offline"} />
-
-        {/* IoT — sewing only */}
-        {mode === "sewing" && (
-          <>
-            <VBar />
-            <StatusDot ok={iotOk} pulse={iotOk} label="IoT" value={iotOk ? "Paired" : "Offline"} />
-          </>
-        )}
-
-        <VBar />
-
-        {/* Session timer */}
-        <SessionTimer startTime={sessionStartTime} showLabel />
-
-        <VBar />
-
-        {/* Wall clock */}
-        <div className="flex items-center gap-1.5">
-          <Clock size={11} className="text-text-muted shrink-0" />
-          <span
-            className="font-mono tabular-nums"
-            style={{ fontSize: 14, color: clock ? "#E8ECF1" : "#3A4A5C" }}
-          >
-            {clock || "──:──:──"}
-          </span>
-        </div>
-
-        <VBar />
-
-        {/* Station chip */}
-        <span
-          className="font-mono text-text-muted rounded"
-          style={{
-            fontSize: 11, padding: "3px 10px",
-            background: "#131B26", border: "1px solid #243044",
-          }}
-        >
-          {config.stationId}
-        </span>
+      <div className="topbar-right">
+        <StatusPill label={`Camera ${cameraStatus}`} tone={cameraStatus === "live" ? "ok" : "bad"} pulse={cameraStatus === "live"} />
+        {mode === "sewing" && <StatusPill label={`IoT ${iotStatus}`} tone={iotStatus === "connected" ? "ok" : "bad"} pulse={iotStatus === "connected"} />}
+        <span className="status-pill"><Clock size={13} /> {elapsed} session</span>
+        <span className="status-pill"><RadioTower size={13} /> {config.serverUrl}</span>
+        <span className="status-pill"><Camera size={13} /> {config.cameraId}</span>
+        <span className="status-pill"><HardDrive size={13} /> {clock}</span>
+        <ThemeToggle compact />
       </div>
     </header>
   );

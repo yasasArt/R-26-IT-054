@@ -4,15 +4,15 @@ import { useSewingStore } from "@/store/sewingStore";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { CYCLE_TIME } from "@/lib/constants";
 
-const TT = { background: "#1A2536", border: "1px solid #243044", borderRadius: 8, fontFamily: "var(--font-ibm-plex-mono)", fontSize: 10, color: "#E8ECF1", boxShadow: "0 4px 20px rgba(0,0,0,0.45)" };
+const TT = { background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, fontFamily: "var(--font-ibm-plex-mono)", fontSize: 10, color: "var(--text)", boxShadow: "0 4px 20px rgba(0,0,0,0.45)" };
 
 export function CycleTimeChart() {
   const { cycleHistory } = useSewingStore();
   const data = cycleHistory.slice(-30).map(r => ({ piece: `#${r.pieceNumber}`, cycleTime: r.durationSeconds }));
 
   return (
-    <div className="flex flex-col overflow-hidden" style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}>
-      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 54, background: "#131B26", borderBottom: "1px solid #243044" }}>
+    <div className="flex flex-col overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}>
+      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 54, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}>
         <div>
           <div className="font-display font-semibold text-text-primary" style={{ fontSize: 13 }}>Cycle Time Trend</div>
           <div className="font-mono text-text-muted" style={{ fontSize: 9, marginTop: 2 }}>Seconds per piece · target ≤ {CYCLE_TIME.TARGET_SECONDS}s</div>
@@ -29,9 +29,9 @@ export function CycleTimeChart() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 4, right: 14, bottom: 0, left: -14 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="piece" tick={{ fill: "#6B7A8D", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: "#6B7A8D", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} unit="s" />
-              <Tooltip contentStyle={TT} labelStyle={{ color: "#6B7A8D", marginBottom: 4 }} formatter={(v) => [`${v ?? "—"}s`, "Cycle"]} isAnimationActive={false} />
+              <XAxis dataKey="piece" tick={{ fill: "var(--muted)", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={{ fill: "var(--muted)", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} unit="s" />
+              <Tooltip contentStyle={TT} labelStyle={{ color: "var(--muted)", marginBottom: 4 }} formatter={(v) => [`${v ?? "—"}s`, "Cycle"]} isAnimationActive={false} />
               <ReferenceLine y={CYCLE_TIME.TARGET_SECONDS}  stroke="#22C55E" strokeDasharray="4 3" strokeOpacity={0.5} strokeWidth={1} />
               <ReferenceLine y={CYCLE_TIME.WARNING_SECONDS} stroke="#FACC15" strokeDasharray="4 3" strokeOpacity={0.35} strokeWidth={1} />
               <Line type="monotone" dataKey="cycleTime" stroke="#3B82F6" strokeWidth={2} dot={{ fill: "#3B82F6", r: 2.5, strokeWidth: 0 }} activeDot={{ r: 5, fill: "#3B82F6", strokeWidth: 0 }} isAnimationActive={false} />

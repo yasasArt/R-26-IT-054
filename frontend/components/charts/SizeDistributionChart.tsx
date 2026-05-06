@@ -7,8 +7,8 @@ import {
 } from "recharts";
 
 const TT = {
-  background: "#1A2536", border: "1px solid #243044", borderRadius: 8,
-  fontFamily: "var(--font-ibm-plex-mono)", fontSize: 10, color: "#E8ECF1",
+  background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8,
+  fontFamily: "var(--font-ibm-plex-mono)", fontSize: 10, color: "var(--text)",
   boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
 };
 
@@ -26,17 +26,17 @@ export function SizeDistributionChart() {
   });
 
   const data = Object.entries(counts).map(([size, count]) => ({
-    size, count, color: SIZE_COLORS[size] ?? "#6B7A8D",
+    size, count, color: SIZE_COLORS[size] ?? "var(--muted)",
   }));
 
   return (
     <div
       className="flex flex-col overflow-hidden"
-      style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}
+      style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}
     >
       <div
         className="flex items-center justify-between px-5 shrink-0"
-        style={{ height: 54, background: "#131B26", borderBottom: "1px solid #243044" }}
+        style={{ height: 54, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}
       >
         <div>
           <div className="font-display font-semibold text-text-primary" style={{ fontSize: 13 }}>
@@ -63,12 +63,12 @@ export function SizeDistributionChart() {
               />
               <XAxis
                 dataKey="size"
-                tick={{ fill: "#6B7A8D", fontSize: 12, fontFamily: "var(--font-ibm-plex-mono)", fontWeight: 600 }}
+                tick={{ fill: "var(--muted)", fontSize: 12, fontFamily: "var(--font-ibm-plex-mono)", fontWeight: 600 }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                tick={{ fill: "#6B7A8D", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }}
+                tick={{ fill: "var(--muted)", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}

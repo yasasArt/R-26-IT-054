@@ -4,15 +4,15 @@ import { useSewingStore } from "@/store/sewingStore";
 import { format } from "date-fns";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const TT = { background: "#1A2536", border: "1px solid #243044", borderRadius: 8, fontFamily: "var(--font-ibm-plex-mono)", fontSize: 10, color: "#E8ECF1", boxShadow: "0 4px 20px rgba(0,0,0,0.45)" };
+const TT = { background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, fontFamily: "var(--font-ibm-plex-mono)", fontSize: 10, color: "var(--text)", boxShadow: "0 4px 20px rgba(0,0,0,0.45)" };
 
 export function PieceCountChart() {
   const { cycleHistory } = useSewingStore();
   const data = cycleHistory.map((r, i) => ({ time: format(new Date(r.timestamp), "HH:mm"), pieces: i + 1 }));
 
   return (
-    <div className="flex flex-col overflow-hidden" style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}>
-      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 54, background: "#131B26", borderBottom: "1px solid #243044" }}>
+    <div className="flex flex-col overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}>
+      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 54, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}>
         <div>
           <div className="font-display font-semibold text-text-primary" style={{ fontSize: 13 }}>Production Accumulation</div>
           <div className="font-mono text-text-muted" style={{ fontSize: 9, marginTop: 2 }}>Cumulative pieces completed this shift</div>
@@ -35,9 +35,9 @@ export function PieceCountChart() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="time" tick={{ fill: "#6B7A8D", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: "#6B7A8D", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={TT} labelStyle={{ color: "#6B7A8D", marginBottom: 4 }} itemStyle={{ color: "#3B82F6" }} formatter={(v) => [`${v ?? "—"} pcs`, ""]} isAnimationActive={false} />
+              <XAxis dataKey="time" tick={{ fill: "var(--muted)", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={{ fill: "var(--muted)", fontSize: 9, fontFamily: "var(--font-ibm-plex-mono)" }} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={TT} labelStyle={{ color: "var(--muted)", marginBottom: 4 }} itemStyle={{ color: "#3B82F6" }} formatter={(v) => [`${v ?? "—"} pcs`, ""]} isAnimationActive={false} />
               <Area type="monotone" dataKey="pieces" stroke="#3B82F6" strokeWidth={2} fill="url(#pieceGrad)" dot={false} isAnimationActive={false} />
             </AreaChart>
           </ResponsiveContainer>

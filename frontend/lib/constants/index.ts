@@ -164,4 +164,5 @@ export const ROUTES = {
   DASHBOARD_QUALITY: "/dashboard/quality",
   LOGS: "/logs",
   DEVICES: "/devices",
+  DEMO: "/demo",
 } as const;

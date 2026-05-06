@@ -28,9 +28,9 @@ export function ShiftSummaryCard() {
   const barColor  = pct >= 100 ? "#22C55E" : pct >= 75 ? "#3B82F6" : "#FACC15";
 
   return (
-    <div className="flex flex-col overflow-hidden" style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}>
+    <div className="flex flex-col overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 48, background: "#131B26", borderBottom: "1px solid #243044" }}>
+      <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 48, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}>
         <span className="font-mono text-text-muted uppercase" style={{ fontSize: 9, letterSpacing: "0.14em" }}>Shift Summary</span>
         {sessionStartTime && <span className="font-mono text-dim" style={{ fontSize: 9 }}>{formatTime(new Date(sessionStartTime))}</span>}
       </div>
@@ -47,9 +47,9 @@ export function ShiftSummaryCard() {
                 <span className="font-mono text-text-muted" style={{ fontSize: 13, marginLeft: 4 }}>/ {target}</span>
               </div>
             </div>
-            <div className="font-mono font-bold" style={{ fontSize: 20, color: pct >= 100 ? "#22C55E" : pct >= 75 ? "#3B82F6" : "#E8ECF1" }}>{pct.toFixed(0)}%</div>
+            <div className="font-mono font-bold" style={{ fontSize: 20, color: pct >= 100 ? "#22C55E" : pct >= 75 ? "#3B82F6" : "var(--text)" }}>{pct.toFixed(0)}%</div>
           </div>
-          <div className="rounded-full overflow-hidden" style={{ height: 6, background: "#243044" }}>
+          <div className="rounded-full overflow-hidden" style={{ height: 6, background: "var(--card-border)" }}>
             <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: barColor, boxShadow: pct >= 100 ? "0 0 10px rgba(34,197,94,0.5)" : "none" }} />
           </div>
         </div>
@@ -57,12 +57,12 @@ export function ShiftSummaryCard() {
         {/* Stats grid */}
         <div className="grid grid-cols-2 gap-2">
           {[
-            { l: "Elapsed",   v: formatDuration(elapsed), c: "#E8ECF1" },
+            { l: "Elapsed",   v: formatDuration(elapsed), c: "var(--text)" },
             { l: "Rate/hr",   v: `${pph} pcs`,            c: "#3B82F6" },
-            { l: "Downtime",  v: formatDuration(totalDowntimeSeconds), c: totalDowntimeSeconds > 600 ? "#EF4444" : "#6B7A8D" },
+            { l: "Downtime",  v: formatDuration(totalDowntimeSeconds), c: totalDowntimeSeconds > 600 ? "#EF4444" : "var(--muted)" },
             { l: "Proj. End", v: projEnd ? formatTime(projEnd) : "On track", c: "#22C55E" },
           ].map(({ l, v, c }) => (
-            <div key={l} style={{ background: "#0B1017", border: "1px solid #243044", borderRadius: 7, padding: "11px 13px" }}>
+            <div key={l} style={{ background: "var(--bg)", border: "1px solid var(--card-border)", borderRadius: 7, padding: "11px 13px" }}>
               <div className="font-mono text-dim uppercase" style={{ fontSize: 7.5, letterSpacing: "0.09em", marginBottom: 5 }}>{l}</div>
               <div className="font-mono font-semibold" style={{ fontSize: 12, color: c }}>{v}</div>
             </div>
@@ -70,7 +70,7 @@ export function ShiftSummaryCard() {
         </div>
 
         {remaining > 0 ? (
-          <div className="text-center rounded-lg font-mono" style={{ padding: "9px 12px", fontSize: 11, background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)", color: "#6B7A8D" }}>
+          <div className="text-center rounded-lg font-mono" style={{ padding: "9px 12px", fontSize: 11, background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)", color: "var(--muted)" }}>
             <span className="text-accent font-semibold">{remaining}</span> pieces remaining
           </div>
         ) : (

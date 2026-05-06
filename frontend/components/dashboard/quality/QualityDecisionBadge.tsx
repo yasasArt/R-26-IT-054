@@ -38,9 +38,9 @@ const CFG: Record<QualityDecision | "none", BadgeConfig> = {
     glow: "0 0 24px rgba(239,68,68,0.18)",
   },
   none: {
-    color: "#3A4A5C",
+    color: "var(--dim)",
     bg: "rgba(255,255,255,0.02)",
-    border: "#243044",
+    border: "var(--card-border)",
     icon: "?",
     desc: "Awaiting inspection",
     glow: "none",
@@ -57,7 +57,7 @@ export function QualityDecisionBadge() {
     <div
       className="flex flex-col overflow-hidden transition-all duration-300"
       style={{
-        background: "#1A2536",
+        background: "var(--card)",
         border: `1px solid ${cfg.border}`,
         borderRadius: 12,
         boxShadow: cfg.glow,
@@ -68,7 +68,7 @@ export function QualityDecisionBadge() {
         className="flex items-center justify-between px-4 shrink-0"
         style={{
           height: 48,
-          background: "#131B26",
+          background: "var(--surface)",
           borderBottom: `1px solid ${cfg.border}`,
         }}
       >
@@ -154,8 +154,8 @@ export function QualityDecisionBadge() {
           <div className="grid grid-cols-2 gap-2">
             <div
               style={{
-                background: "#0B1017",
-                border: "1px solid #243044",
+                background: "var(--bg)",
+                border: "1px solid var(--card-border)",
                 borderRadius: 7,
                 padding: "11px 13px",
               }}
@@ -180,8 +180,8 @@ export function QualityDecisionBadge() {
 
             <div
               style={{
-                background: "#0B1017",
-                border: "1px solid #243044",
+                background: "var(--bg)",
+                border: "1px solid var(--card-border)",
                 borderRadius: 7,
                 padding: "11px 13px",
               }}

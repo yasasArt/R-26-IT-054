@@ -9,12 +9,12 @@ export function ColourSwatchDisplay() {
   return (
     <div
       className="flex flex-col overflow-hidden"
-      style={{ background: "#1A2536", border: "1px solid #243044", borderRadius: 12 }}
+      style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 shrink-0"
-        style={{ height: 48, background: "#131B26", borderBottom: "1px solid #243044" }}
+        style={{ height: 48, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}
       >
         <span className="font-mono text-text-muted uppercase" style={{ fontSize: 9, letterSpacing: "0.14em" }}>
           Detected Colours
@@ -51,7 +51,7 @@ export function ColourSwatchDisplay() {
                     {c.percentage.toFixed(0)}%
                   </span>
                 </div>
-                <div className="rounded-full overflow-hidden" style={{ height: 3, background: "#243044" }}>
+                <div className="rounded-full overflow-hidden" style={{ height: 3, background: "var(--card-border)" }}>
                   <div
                     className="h-full rounded-full"
                     style={{ width: `${c.percentage}%`, background: c.hex, boxShadow: `0 0 4px ${c.hex}` }}
