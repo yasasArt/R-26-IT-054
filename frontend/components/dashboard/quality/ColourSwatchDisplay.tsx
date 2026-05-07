@@ -12,7 +12,7 @@ export function ColourSwatchDisplay() {
       style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 12 }}
     >
       {/* Header */}
-      <div
+      {/* <div
         className="flex items-center justify-between px-4 shrink-0"
         style={{ height: 48, background: "var(--surface)", borderBottom: "1px solid var(--card-border)" }}
       >
@@ -20,7 +20,7 @@ export function ColourSwatchDisplay() {
           Detected Colours
         </span>
         <span className="font-mono text-dim" style={{ fontSize: 9 }}>F3</span>
-      </div>
+      </div> */}
 
       {/* Body */}
       <div style={{ padding: "16px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
