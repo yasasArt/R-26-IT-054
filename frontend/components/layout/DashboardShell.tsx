@@ -11,6 +11,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isConfigured } = useWorkstationStore();
   const [mounted, setMounted] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const id = window.setTimeout(() => setMounted(true), 0);
@@ -32,8 +33,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   if (!isConfigured) return null;
 
   return (
-    <div className="workstation-shell">
-      <Sidebar />
+    <div className={`workstation-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((value) => !value)} />
       <div className="shell-main">
         <TopBar />
         <main className="page">{children}</main>

@@ -71,11 +71,11 @@ export default function SetupPage() {
       <section className="setup-main animate-in">
         <div className="page-head">
           <div>
-            <div className="eyebrow">Configuration wizard</div>
+            <div className="eyebrow">Configuration wizard · Step {step} of 3</div>
             <h1 className="page-title">
               {step === 1 ? "Select workstation area mode" : step === 2 ? "Confirm local devices" : "Start production session"}
             </h1>
-            <p className="muted" style={{ maxWidth: 760, lineHeight: 1.55 }}>
+            <p className="muted" style={{ maxWidth: 680, lineHeight: 1.5, fontSize: 12.5, marginTop: 5 }}>
               This prototype is a single configurable local station. The selected mode controls the dashboard, device expectations, and simulated data stream.
             </p>
           </div>
@@ -205,7 +205,7 @@ export default function SetupPage() {
           </div>
         )}
 
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 20 }}>
           <button className="btn" onClick={back}><ArrowLeft size={16} /> Back</button>
           <button className={step === 3 ? "btn btn-success" : "btn btn-primary"} onClick={next}>
             {step === 3 ? <UserRound size={16} /> : null}

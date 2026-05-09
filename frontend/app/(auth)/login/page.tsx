@@ -108,12 +108,11 @@ export default function LoginPage() {
 
       <section className="auth-main">
         <div className="center-card animate-in">
-          <div style={{ textAlign: "center", marginBottom: 26 }}>
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
             <div className="eyebrow">Factory station access</div>
-            <h2 className="page-title">Start a local monitoring session</h2>
-            <p className="muted" style={{ lineHeight: 1.55 }}>
-              Select the workstation on the garment floor and enter the operator
-              PIN.
+            <h2 className="page-title" style={{ marginTop: 5 }}>Start a monitoring session</h2>
+            <p className="muted" style={{ lineHeight: 1.5, fontSize: 12.5, marginTop: 6 }}>
+              Select the workstation on the garment floor and enter the operator PIN.
             </p>
           </div>
 
@@ -126,7 +125,7 @@ export default function LoginPage() {
               <StatusPill label="Demo PIN 1234" tone="info" />
             </div>
 
-            <div className="panel-body grid" style={{ gap: 20 }}>
+            <div className="panel-body grid" style={{ gap: 16 }}>
               <label className="field">
                 <span className="meta-label">Assigned workstation</span>
                 <select
