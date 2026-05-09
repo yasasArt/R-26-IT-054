@@ -23,8 +23,8 @@ function DemoContent() {
   const sewing = useSewingStore();
   const quality = useQualityStore();
   const isSewing = config.mode === "sewing";
-  const reworkEvents = sewing.iotEvents.filter((item) => item.type.includes("rework"));
-  const downtimeEvents = sewing.iotEvents.filter((item) => item.type.includes("downtime"));
+  const reworkCount = sewing.totalReworkCount + (sewing.reworkActive ? 1 : 0);
+  const downtimeCount = sewing.iotEvents.filter((item) => item.type === "downtime_resolved").length + (sewing.downtimeActive ? 1 : 0);
   const recentRows = isSewing
     ? [
         ...sewing.detectionLog.map(item => ({
@@ -85,7 +85,7 @@ function DemoContent() {
       <div className="grid grid-4">
         <MetricCard label="Configured mode" value={isSewing ? "Sewing" : "Quality"} sub={config.stationId} tone="info" />
         <MetricCard label={isSewing ? "Pieces" : "Inspections"} value={isSewing ? sewing.pieceCount : quality.inspectionLog.length} sub={isSewing ? `${sewing.detectionLog.length} count records` : `${quality.approvedCount} pass, ${quality.reworkCount} rework`} tone="ok" />
-        <MetricCard label={isSewing ? "Rework" : "Pass rate"} value={isSewing ? reworkEvents.length : quality.inspectionLog.length ? `${Math.round((quality.approvedCount / quality.inspectionLog.length) * 100)}%` : "—"} sub={isSewing ? "Operator action events" : "Accepted inspections"} tone="cyan" />
+        <MetricCard label={isSewing ? "Rework" : "Pass rate"} value={isSewing ? reworkCount : quality.inspectionLog.length ? `${Math.round((quality.approvedCount / quality.inspectionLog.length) * 100)}%` : "—"} sub={isSewing ? "Completed plus active cycles" : "Accepted inspections"} tone="cyan" />
         <MetricCard label="Active script" value={isSewing ? "Sewing" : "Quality"} sub="Buttons below follow selected mode" tone="warn" />
       </div>
 
@@ -113,8 +113,8 @@ function DemoContent() {
         {isSewing && (
           <Panel title="Rework and Downtime Mix" eyebrow="Operator button events">
             <div className="panel-body demo-page-chart">
-              <DemoActionBar label="Rework" value={reworkEvents.length} total={reworkEvents.length + downtimeEvents.length} tone="warn" />
-              <DemoActionBar label="Downtime" value={downtimeEvents.length} total={reworkEvents.length + downtimeEvents.length} tone="bad" />
+              <DemoActionBar label="Rework" value={reworkCount} total={reworkCount + downtimeCount} tone="warn" />
+              <DemoActionBar label="Downtime" value={downtimeCount} total={reworkCount + downtimeCount} tone="bad" />
               <div className="demo-latest-event"><TimerReset size={14} /><span>Use trigger and resolve to create complete history rows.</span></div>
             </div>
           </Panel>
@@ -126,6 +126,8 @@ function DemoContent() {
               <>
                 <SummaryRow label="Last piece" value={sewing.detectionLog[0] ? `#${sewing.detectionLog[0].pieceNumber}` : "—"} />
                 <SummaryRow label="Last cycle" value={sewing.detectionLog[0] ? `${sewing.detectionLog[0].cycleTimeSeconds}s` : "—"} />
+                <SummaryRow label="Rework cycles" value={reworkCount} />
+                <SummaryRow label="Downtime cycles" value={downtimeCount} />
                 <SummaryRow label="Machine status" value={sewing.downtimeActive ? "Downtime" : sewing.reworkActive ? "Rework" : "Running"} />
               </>
             ) : (

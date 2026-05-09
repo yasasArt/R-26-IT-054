@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -9,7 +8,6 @@ import {
   CheckCircle2,
   Download,
   Eye,
-  Gauge,
   Pause,
   Play,
   RotateCcw,
@@ -20,6 +18,7 @@ import {
 } from "lucide-react";
 import { CameraFrame, DataTable, MetricCard, PageHeader, Panel, StatusPill } from "@/components/industrial/Primitives";
 import { formatDuration, formatTime } from "@/lib/utils";
+import { useSewingStore } from "@/store/sewingStore";
 
 type WorkflowState = "idle_setup" | "sewing" | "put_aside" | "rest_pause";
 type Visibility = "clear" | "partial" | "blocked";
@@ -147,6 +146,8 @@ function createInitialState(): SessionState {
 export default function SewingDashboardPage() {
   const [session, setSession] = useState<SessionState>(() => createInitialState());
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sewing = useSewingStore();
+  const nowMs = useNowMs(sewing.downtimeActive);
 
   const currentStep = DEMO_STEPS[session.stepIndex];
   const latestCycle = session.cycles.at(-1);
@@ -165,6 +166,11 @@ export default function SewingDashboardPage() {
   const recentAverageConfidence = recentCycles.length
     ? Math.round((recentCycles.reduce((sum, cycle) => sum + cycle.confidence, 0) / recentCycles.length) * 100)
     : 0;
+  const downtimeCycles = useMemo(() => buildDowntimeCycles(sewing.iotEvents, sewing.downtimeActive, sewing.downtimeStartTime, nowMs), [sewing.iotEvents, sewing.downtimeActive, sewing.downtimeStartTime, nowMs]);
+  const reworkCycles = sewing.totalReworkCount + (sewing.reworkActive ? 1 : 0);
+  const downtimeCount = downtimeCycles.length;
+  const activeDowntimeSeconds = sewing.downtimeActive && sewing.downtimeStartTime ? Math.max(Math.floor((nowMs - new Date(sewing.downtimeStartTime).getTime()) / 1000), 0) : 0;
+  const totalDowntimeWithActive = sewing.totalDowntimeSeconds + activeDowntimeSeconds;
 
   useEffect(() => {
     if (!session.isRunning) {
@@ -215,7 +221,7 @@ export default function SewingDashboardPage() {
       <PageHeader
         eyebrow="State workflow prototype | Frontend demo"
         title="Sewing workstation intelligence"
-        description="State-based garment counting prototype using idle_setup, sewing, put_aside, and rest_pause transitions. Counts are accepted only when a stable sewing to put_aside completion is validated."
+        description=""
         actions={
           <div className="dashboard-actions">
             <StatusPill label={modelStatus} tone={modelStatus === "Decision ready" ? "ok" : "warn"} pulse={session.isRunning} />
@@ -316,14 +322,22 @@ export default function SewingDashboardPage() {
             ))}
           </div>
         </Panel>
+      </div>
 
-        {/* <Panel title="Count Quality Checks" eyebrow="Reasons a count can be trusted">
-          <div className="warning-list">
-            <WarningRow icon={<AlertTriangle size={17} />} label="Rejected false counts" value={session.rejectedCounts} tone="warn" />
-            <WarningRow icon={<Eye size={17} />} label="Visibility now" value={visibilityLabel(currentStep.visibility)} tone={currentStep.visibility === "blocked" ? "bad" : currentStep.visibility === "partial" ? "warn" : "ok"} />
-            <WarningRow icon={<Gauge size={17} />} label="Decision confidence" value={`${Math.round(currentStep.confidence * 100)}%`} tone={currentStep.confidence >= MIN_CONFIDENCE ? "ok" : "warn"} />
+      <div className="grid grid-3 analytics-grid">
+        <Panel title="Rework and Downtime Details" eyebrow="Operator action status">
+          <div className="stat-list">
+            <SummaryRow label="Machine status" value={sewing.downtimeActive ? "Downtime active" : sewing.reworkActive ? "Rework active" : "Running"} />
+            <SummaryRow label="Rework cycles" value={reworkCycles} />
+            <SummaryRow label="Downtime cycles" value={downtimeCount} />
+            <SummaryRow label="Total downtime" value={formatDuration(totalDowntimeWithActive)} />
+            <SummaryRow label="Latest action" value={labelLatestAction(sewing.iotEvents[0]?.type)} />
           </div>
-        </Panel> */}
+        </Panel>
+
+        <Panel title="Downtime Duration Chart" eyebrow="Recent downtime cycles" className="span-2">
+          <DowntimeChart cycles={downtimeCycles} />
+        </Panel>
       </div>
 
       <div className="grid grid-3 analytics-grid">
@@ -534,21 +548,100 @@ function RuleRow({ label, value, active }: { label: string; value: string; activ
   );
 }
 
-function WarningRow({ icon, label, value, tone }: { icon: ReactNode; label: string; value: string | number; tone: "ok" | "warn" | "bad" }) {
-  return (
-    <div className="warning-row">
-      <span className={tone}>{icon}</span>
-      <span>{label}</span>
-      <strong className={tone}>{value}</strong>
-    </div>
-  );
-}
-
 function SummaryRow({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="summary-row">
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+type SewingIoTEvent = ReturnType<typeof useSewingStore.getState>["iotEvents"][number];
+type DowntimeCycle = { id: string; startedAt: Date; durationSeconds: number; status: "active" | "closed" };
+
+function useNowMs(active: boolean) {
+  const [nowMs, setNowMs] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [active]);
+
+  return nowMs;
+}
+
+function buildDowntimeCycles(events: SewingIoTEvent[], downtimeActive: boolean, downtimeStartTime: Date | null, nowMs: number): DowntimeCycle[] {
+  const cycles: DowntimeCycle[] = [];
+  const starts = [...events]
+    .filter((event) => event.type === "downtime_triggered")
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const resolved = [...events]
+    .filter((event) => event.type === "downtime_resolved")
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  if (downtimeActive && downtimeStartTime) {
+    cycles.push({
+      id: "active-downtime",
+      startedAt: new Date(downtimeStartTime),
+      durationSeconds: Math.max(Math.floor((nowMs - new Date(downtimeStartTime).getTime()) / 1000), 0),
+      status: "active",
+    });
+  }
+
+  resolved.forEach((event, index) => {
+    cycles.push({
+      id: event.id,
+      startedAt: starts[index] ? new Date(starts[index].timestamp) : new Date(event.timestamp),
+      durationSeconds: event.durationSeconds ?? 0,
+      status: "closed",
+    });
+  });
+
+  return cycles.slice(0, 8);
+}
+
+function labelLatestAction(type?: string) {
+  if (!type) return "No operator actions";
+  if (type === "rework_triggered") return "Rework started";
+  if (type === "rework_resolved") return "Rework resolved";
+  if (type === "downtime_triggered") return "Downtime started";
+  return "Downtime resolved";
+}
+
+function DowntimeChart({ cycles }: { cycles: DowntimeCycle[] }) {
+  const max = Math.max(...cycles.map((cycle) => cycle.durationSeconds), 60);
+
+  if (!cycles.length) {
+    return (
+      <div className="empty-chart">
+        <Timer size={18} />
+        <span>No downtime cycles yet. Trigger downtime in the demo panel to populate this chart.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="chart-panel downtime-chart">
+      <div className="downtime-list-chart" role="img" aria-label="Bar chart showing recent downtime durations">
+        {cycles.map((cycle, index) => (
+          <div key={cycle.id} className={`downtime-row ${cycle.status}`}>
+            <div className="downtime-row-label">
+              <strong>{cycle.status === "active" ? "Active" : `Downtime ${index + 1}`}</strong>
+              <span>{formatTime(cycle.startedAt)}</span>
+            </div>
+            <div className="downtime-row-track">
+              <div style={{ width: `${Math.max((cycle.durationSeconds / max) * 100, 8)}%` }} />
+            </div>
+            <strong className="downtime-row-value">{formatDuration(cycle.durationSeconds)}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="chart-legend">
+        <span><Timer size={14} /> Red bars are closed downtime cycles</span>
+        <span>Outlined bar is active downtime</span>
+      </div>
     </div>
   );
 }

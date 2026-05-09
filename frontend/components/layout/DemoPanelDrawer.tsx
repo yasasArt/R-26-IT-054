@@ -19,8 +19,8 @@ export function DemoPanelDrawer({ isOpen, onClose }: DemoPanelDrawerProps) {
   const sewing = useSewingStore();
   const quality = useQualityStore();
   const isSewing = config.mode === "sewing";
-  const reworkEvents = sewing.iotEvents.filter((event) => event.type.includes("rework"));
-  const downtimeEvents = sewing.iotEvents.filter((event) => event.type.includes("downtime"));
+  const reworkCount = sewing.totalReworkCount + (sewing.reworkActive ? 1 : 0);
+  const downtimeCount = sewing.iotEvents.filter((event) => event.type === "downtime_resolved").length + (sewing.downtimeActive ? 1 : 0);
   const latestSewingEvent = sewing.iotEvents[0] || sewing.detectionLog[0];
 
   // Close on Escape
@@ -102,8 +102,8 @@ export function DemoPanelDrawer({ isOpen, onClose }: DemoPanelDrawerProps) {
                 {isSewing ? (
                   <>
                     <DemoFact label="Pieces" value={sewing.pieceCount} />
-                    <DemoFact label="Rework actions" value={reworkEvents.length} />
-                    <DemoFact label="Downtime actions" value={downtimeEvents.length} />
+                    <DemoFact label="Rework cycles" value={reworkCount} />
+                    <DemoFact label="Downtime cycles" value={downtimeCount} />
                     <DemoFact label="Machine" value={sewing.downtimeActive ? "Downtime" : sewing.reworkActive ? "Rework" : "Running"} />
                   </>
                 ) : (
@@ -151,8 +151,8 @@ export function DemoPanelDrawer({ isOpen, onClose }: DemoPanelDrawerProps) {
               <div className="panel" style={{ boxShadow: "none", padding: 10 }}>
                 <div className="meta-label">Action balance</div>
                 <div className="demo-action-chart">
-                  <DemoActionBar label="Rework" value={reworkEvents.length} total={reworkEvents.length + downtimeEvents.length} tone="warn" />
-                  <DemoActionBar label="Downtime" value={downtimeEvents.length} total={reworkEvents.length + downtimeEvents.length} tone="bad" />
+                  <DemoActionBar label="Rework" value={reworkCount} total={reworkCount + downtimeCount} tone="warn" />
+                  <DemoActionBar label="Downtime" value={downtimeCount} total={reworkCount + downtimeCount} tone="bad" />
                 </div>
                 <div className="demo-latest-event">
                   <TimerReset size={13} />

@@ -1076,6 +1076,110 @@ a {
   background-size: 100% 38px;
 }
 
+.downtime-chart {
+  display: grid;
+  gap: 10px;
+}
+
+.downtime-list-chart {
+  min-height: 190px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    color-mix(in srgb, var(--surface-2) 74%, transparent);
+  background-size: 100% 38px;
+}
+
+.downtime-row {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.34fr) minmax(120px, 1fr) minmax(72px, auto);
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg) 28%, transparent);
+}
+
+.downtime-row.active {
+  border-color: color-mix(in srgb, var(--red) 54%, var(--line));
+  background: color-mix(in srgb, var(--red) 9%, transparent);
+}
+
+.downtime-row-label {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.downtime-row-label strong,
+.downtime-row-value {
+  color: var(--text);
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.downtime-row-label span {
+  color: var(--muted);
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 9px;
+}
+
+.downtime-row-track {
+  height: 16px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--red) 26%, var(--line-soft));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--red) 8%, var(--surface-2));
+}
+
+.downtime-row-track > div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--red), color-mix(in srgb, var(--red) 55%, var(--orange)));
+}
+
+.downtime-row.active .downtime-row-track > div {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--red),
+    var(--red) 8px,
+    color-mix(in srgb, var(--red) 58%, var(--orange)) 8px,
+    color-mix(in srgb, var(--red) 58%, var(--orange)) 16px
+  );
+}
+
+.downtime-row-value {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.empty-chart {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 18px;
+  color: var(--muted);
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 64%, transparent);
+}
+
+.empty-chart span {
+  max-width: 360px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .cycle-target-line,
 .cycle-warning-line {
   position: absolute;
@@ -1428,5 +1532,13 @@ a {
   .pin-box {
     height: 54px;
     font-size: 22px;
+  }
+
+  .downtime-row {
+    grid-template-columns: 1fr;
+  }
+
+  .downtime-row-value {
+    text-align: left;
   }
 }
