@@ -170,6 +170,7 @@ export const useSewingStore = create<SewingState>()((set, get) => ({
     set({ dualSignal: INITIAL_DUAL_SIGNAL }),
 
   startRework: () => {
+    if (get().reworkActive) return;
     const now = new Date();
     const newEvent: IIoTEvent = {
       id: generateId("iot"),
@@ -187,6 +188,7 @@ export const useSewingStore = create<SewingState>()((set, get) => ({
 
   endRework: () => {
     const state = get();
+    if (!state.reworkActive) return;
     const durationSeconds = state.reworkStartTime
       ? Math.floor((Date.now() - state.reworkStartTime.getTime()) / 1000)
       : 0;
@@ -201,12 +203,13 @@ export const useSewingStore = create<SewingState>()((set, get) => ({
       reworkActive: false,
       reworkStartTime: null,
       totalReworkCount: s.totalReworkCount + 1,
-      operatorStatus: "active",
+      operatorStatus: s.downtimeActive ? "downtime" : "active",
       iotEvents: [newEvent, ...s.iotEvents],
     }));
   },
 
   startDowntime: () => {
+    if (get().downtimeActive) return;
     const now = new Date();
     const newEvent: IIoTEvent = {
       id: generateId("iot"),
@@ -224,6 +227,7 @@ export const useSewingStore = create<SewingState>()((set, get) => ({
 
   endDowntime: () => {
     const state = get();
+    if (!state.downtimeActive) return;
     const durationSeconds = state.downtimeStartTime
       ? Math.floor((Date.now() - state.downtimeStartTime.getTime()) / 1000)
       : 0;
@@ -238,7 +242,7 @@ export const useSewingStore = create<SewingState>()((set, get) => ({
       downtimeActive: false,
       downtimeStartTime: null,
       totalDowntimeSeconds: s.totalDowntimeSeconds + durationSeconds,
-      operatorStatus: "active",
+      operatorStatus: s.reworkActive ? "rework" : "active",
       iotEvents: [newEvent, ...s.iotEvents],
     }));
   },

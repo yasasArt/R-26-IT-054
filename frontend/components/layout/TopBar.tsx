@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { Camera, Clock, HardDrive, RadioTower } from "lucide-react";
+import { Camera, Clock, RadioTower } from "lucide-react";
 import { useQualityStore } from "@/store/qualityStore";
 import { useSewingStore } from "@/store/sewingStore";
 import { useWorkstationStore } from "@/store/workstationStore";
@@ -39,16 +39,52 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div>
-        <div className="eyebrow">Local workstation</div>
-        <strong>{mode === "quality" ? "Quality Checker Area" : "Sewing Operator Area"}</strong>
+        <div className="eyebrow">Local workstation · {config.stationId}</div>
+        <strong style={{ fontSize: 13 }}>{mode === "quality" ? "Quality Checker Area" : "Sewing Operator Area"}</strong>
       </div>
+
       <div className="topbar-right">
-        <StatusPill label={`Camera ${cameraStatus}`} tone={cameraStatus === "live" ? "ok" : "bad"} pulse={cameraStatus === "live"} />
-        {mode === "sewing" && <StatusPill label={`IoT ${iotStatus}`} tone={iotStatus === "connected" ? "ok" : "bad"} pulse={iotStatus === "connected"} />}
-        <span className="status-pill"><Clock size={13} /> {elapsed} session</span>
-        <span className="status-pill"><RadioTower size={13} /> {config.serverUrl}</span>
-        <span className="status-pill"><Camera size={13} /> {config.cameraId}</span>
-        <span className="status-pill"><HardDrive size={13} /> {clock}</span>
+        {/* Live device status */}
+        <StatusPill
+          label={`Camera ${cameraStatus}`}
+          tone={cameraStatus === "live" ? "ok" : "bad"}
+          pulse={cameraStatus === "live"}
+        />
+        {mode === "sewing" && (
+          <StatusPill
+            label={`IoT ${iotStatus}`}
+            tone={iotStatus === "connected" ? "ok" : "bad"}
+            pulse={iotStatus === "connected"}
+          />
+        )}
+
+        {/* Divider */}
+        <span style={{ width: 1, height: 16, background: "var(--line)", flexShrink: 0 }} />
+
+        {/* Session + connection info */}
+        <span className="status-pill" title={`Server: ${config.serverUrl}`}>
+          <RadioTower size={11} />
+          {config.serverUrl}
+        </span>
+        <span className="status-pill">
+          <Camera size={11} />
+          {config.cameraId}
+        </span>
+        <span className="status-pill">
+          <Clock size={11} />
+          {elapsed}
+        </span>
+
+        {/* Divider */}
+        <span style={{ width: 1, height: 16, background: "var(--line)", flexShrink: 0 }} />
+
+        <span
+          className="status-pill"
+          suppressHydrationWarning
+          style={{ fontVariantNumeric: "tabular-nums", minWidth: 72, justifyContent: "center" }}
+        >
+          {clock}
+        </span>
         <ThemeToggle compact />
       </div>
     </header>

@@ -36,7 +36,7 @@ export function Panel({
     <section className={`panel ${className}`}>
       <div className="panel-header">
         <div>
-          {eyebrow && <div className="eyebrow">{eyebrow}</div>}
+          {eyebrow && <div className="eyebrow" style={{ marginBottom: 1 }}>{eyebrow}</div>}
           <h2 className="panel-title">{title}</h2>
         </div>
         {action}
@@ -94,7 +94,11 @@ export function PageHeader({
       <div>
         <div className="eyebrow">{eyebrow}</div>
         <h1 className="page-title">{title}</h1>
-        {description && <p className="muted" style={{ maxWidth: 760, margin: "8px 0 0", lineHeight: 1.55 }}>{description}</p>}
+        {description && (
+          <p className="muted" style={{ maxWidth: 680, margin: "5px 0 0", lineHeight: 1.5, fontSize: 12.5 }}>
+            {description}
+          </p>
+        )}
       </div>
       {actions}
     </div>
@@ -112,7 +116,7 @@ export function CameraFrame({
     <div className="camera-frame">
       <div className="camera-overlay" />
       <div className="scan-line" />
-      <div style={{ position: "absolute", top: 16, left: 16 }}>
+      <div style={{ position: "absolute", top: 12, left: 12 }}>
         <StatusPill label={mode === "sewing" ? "Output zone live" : "Inspection camera live"} tone="ok" pulse />
       </div>
       {children}
@@ -145,9 +149,11 @@ export function MiniBarChart({
 export function DataTable({
   headers,
   rows,
+  emptyMessage = "No records to display.",
 }: {
   headers: string[];
   rows: Array<Array<ReactNode>>;
+  emptyMessage?: string;
 }) {
   return (
     <div className="table-wrap">
@@ -156,11 +162,17 @@ export function DataTable({
           <tr>{headers.map(header => <th key={header}>{header}</th>)}</tr>
         </thead>
         <tbody>
-          {rows.map((row, rowIndex) => (
-            <tr key={rowIndex}>
-              {row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}
+          {rows.length ? (
+            rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={headers.length} className="muted">{emptyMessage}</td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
     </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -9,7 +8,6 @@ import {
   CheckCircle2,
   Download,
   Eye,
-  Gauge,
   Pause,
   Play,
   RotateCcw,
@@ -20,6 +18,7 @@ import {
 } from "lucide-react";
 import { CameraFrame, DataTable, MetricCard, PageHeader, Panel, StatusPill } from "@/components/industrial/Primitives";
 import { formatDuration, formatTime } from "@/lib/utils";
+import { useSewingStore } from "@/store/sewingStore";
 
 type WorkflowState = "idle_setup" | "sewing" | "put_aside" | "rest_pause";
 type Visibility = "clear" | "partial" | "blocked";
@@ -147,6 +146,8 @@ function createInitialState(): SessionState {
 export default function SewingDashboardPage() {
   const [session, setSession] = useState<SessionState>(() => createInitialState());
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sewing = useSewingStore();
+  const nowMs = useNowMs(sewing.downtimeActive);
 
   const currentStep = DEMO_STEPS[session.stepIndex];
   const latestCycle = session.cycles.at(-1);
@@ -159,6 +160,17 @@ export default function SewingDashboardPage() {
   const productivityRate = Math.round((3600 / Math.max(averageCycle || TARGET_CYCLE_SECONDS, 1)) * 10) / 10;
   const stateIcon = STATE_META[session.currentState].icon;
   const projection = Math.max(0, 60 - session.pieceCount);
+  const recentCycles = session.cycles.slice(-12);
+  const recentSlowCycles = recentCycles.filter((cycle) => cycle.cycleTime > TARGET_CYCLE_SECONDS).length;
+  const recentFastestCycle = recentCycles.length ? Math.min(...recentCycles.map((cycle) => cycle.cycleTime)) : 0;
+  const recentAverageConfidence = recentCycles.length
+    ? Math.round((recentCycles.reduce((sum, cycle) => sum + cycle.confidence, 0) / recentCycles.length) * 100)
+    : 0;
+  const downtimeCycles = useMemo(() => buildDowntimeCycles(sewing.iotEvents, sewing.downtimeActive, sewing.downtimeStartTime, nowMs), [sewing.iotEvents, sewing.downtimeActive, sewing.downtimeStartTime, nowMs]);
+  const reworkCycles = sewing.totalReworkCount + (sewing.reworkActive ? 1 : 0);
+  const downtimeCount = downtimeCycles.length;
+  const activeDowntimeSeconds = sewing.downtimeActive && sewing.downtimeStartTime ? Math.max(Math.floor((nowMs - new Date(sewing.downtimeStartTime).getTime()) / 1000), 0) : 0;
+  const totalDowntimeWithActive = sewing.totalDowntimeSeconds + activeDowntimeSeconds;
 
   useEffect(() => {
     if (!session.isRunning) {
@@ -209,7 +221,7 @@ export default function SewingDashboardPage() {
       <PageHeader
         eyebrow="State workflow prototype | Frontend demo"
         title="Sewing workstation intelligence"
-        description="State-based garment counting prototype using idle_setup, sewing, put_aside, and rest_pause transitions. Counts are accepted only when a stable sewing to put_aside completion is validated."
+        description=""
         actions={
           <div className="dashboard-actions">
             <StatusPill label={modelStatus} tone={modelStatus === "Decision ready" ? "ok" : "warn"} pulse={session.isRunning} />
@@ -227,10 +239,9 @@ export default function SewingDashboardPage() {
 
       <div className="state-kpi-grid">
         <StateMetric icon={stateIcon} label="Live state" value={STATE_META[session.currentState].label} tone={STATE_META[session.currentState].tone} sub={currentStep.note} />
-        <MetricCard label="Validated pieces" value={session.pieceCount} sub={`${projection} pcs remaining to 60 pc demo target`} tone="ok" badge="transition gated" />
+        <MetricCard label="Validated pieces" value={session.pieceCount} sub={`${projection} pcs remaining | transition gated`} tone="ok" badge="gated" />
         <MetricCard label="Latest cycle" value={latestCycle?.cycleTime ?? "—"} unit={latestCycle ? "s" : ""} sub={`Primary: put_aside_start - sewing_start`} tone={cycleTone(latestCycle?.cycleTime ?? 0)} />
         <MetricCard label="Average cycle" value={averageCycle.toFixed(1)} unit="s" sub={`${productivityRate} pcs/hour current pace`} tone="cyan" />
-        <MetricCard label="Model confidence" value={Math.round(currentStep.confidence * 100)} unit="%" sub={`${visibilityLabel(currentStep.visibility)} visibility`} tone={currentStep.confidence >= MIN_CONFIDENCE ? "info" : "warn"} />
       </div>
 
       <div className="grid monitor-grid sewing-workflow-grid">
@@ -238,6 +249,7 @@ export default function SewingDashboardPage() {
           title="Live State Video Overlay"
           eyebrow="Garment + pose + temporal state"
           action={<StatusPill label={STATE_META[session.currentState].label} tone={STATE_META[session.currentState].tone} pulse />}
+          className="span-2"
         >
           <CameraFrame mode="sewing">
             <div className={`state-video state-${session.currentState}`}>
@@ -272,7 +284,7 @@ export default function SewingDashboardPage() {
           </CameraFrame>
         </Panel>
 
-        <div className="grid">
+        <div className="grid live-monitor-support span-2">
           <Panel title="Transition Decision Engine" eyebrow="False-count prevention" action={<ShieldCheck size={18} className="ok" />}>
             <div className="decision-stack">
               <RuleRow label="Required transition" value="sewing -> put_aside" active={session.previousState === "sewing" && session.currentState === "put_aside"} />
@@ -299,7 +311,7 @@ export default function SewingDashboardPage() {
       </div>
 
       <div className="grid workflow-side-grid">
-        <Panel title="Recent State Timeline" eyebrow="Smoothed transitions" className="span-2">
+        <Panel title="Recent Counting Decisions" eyebrow="What the system accepted or rejected" className="span-2">
           <div className="timeline-strip">
             {session.transitions.slice(0, 9).map((transition) => (
               <div key={transition.id} className={`timeline-event ${transition.decision}`}>
@@ -310,32 +322,41 @@ export default function SewingDashboardPage() {
             ))}
           </div>
         </Panel>
+      </div>
 
-        <Panel title="Warnings" eyebrow="Occlusion and uncertainty">
-          <div className="warning-list">
-            <WarningRow icon={<AlertTriangle size={17} />} label="Rejected false counts" value={session.rejectedCounts} tone="warn" />
-            <WarningRow icon={<Eye size={17} />} label="Visibility now" value={visibilityLabel(currentStep.visibility)} tone={currentStep.visibility === "blocked" ? "bad" : currentStep.visibility === "partial" ? "warn" : "ok"} />
-            <WarningRow icon={<Gauge size={17} />} label="Decision confidence" value={`${Math.round(currentStep.confidence * 100)}%`} tone={currentStep.confidence >= MIN_CONFIDENCE ? "ok" : "warn"} />
+      <div className="grid grid-3 analytics-grid">
+        <Panel title="Rework and Downtime Details" eyebrow="Operator action status">
+          <div className="stat-list">
+            <SummaryRow label="Machine status" value={sewing.downtimeActive ? "Downtime active" : sewing.reworkActive ? "Rework active" : "Running"} />
+            <SummaryRow label="Rework cycles" value={reworkCycles} />
+            <SummaryRow label="Downtime cycles" value={downtimeCount} />
+            <SummaryRow label="Total downtime" value={formatDuration(totalDowntimeWithActive)} />
+            <SummaryRow label="Latest action" value={labelLatestAction(sewing.iotEvents[0]?.type)} />
           </div>
         </Panel>
-      </div>
 
-      <div className="grid grid-3 analytics-grid">
-        <Panel title="Cycle Time Trend" eyebrow="Last completed pieces" className="span-2">
-          <CycleTrend cycles={session.cycles.slice(-12)} />
-        </Panel>
-        <Panel title="Count Over Time" eyebrow="Accepted completions">
-          <CountTrend cycles={session.cycles.slice(-10)} />
+        <Panel title="Downtime Duration Chart" eyebrow="Recent downtime cycles" className="span-2">
+          <DowntimeChart cycles={downtimeCycles} />
         </Panel>
       </div>
 
       <div className="grid grid-3 analytics-grid">
-        <Panel title="Session Statistics" eyebrow="Demo workstation">
+        <Panel title="Cycle Time by Piece" eyebrow="Lower bars mean faster sewing" className="span-2">
+          <CycleTrend cycles={recentCycles} />
+        </Panel>
+        <Panel title="Count Growth" eyebrow="Each step is one accepted garment">
+          <CountTrend cycles={session.cycles.slice(-10)} target={60} />
+        </Panel>
+      </div>
+
+      <div className="grid grid-3 analytics-grid">
+        <Panel title="Session Statistics" eyebrow="Plain production summary">
           <div className="stat-list">
             <SummaryRow label="Elapsed time" value={formatDuration(session.elapsedSeconds)} />
             <SummaryRow label="Accepted transitions" value={session.cycles.length} />
+            <SummaryRow label="Fastest recent cycle" value={recentFastestCycle ? `${recentFastestCycle}s` : "—"} />
+            <SummaryRow label="Slow recent cycles" value={`${recentSlowCycles} of ${recentCycles.length}`} />
             <SummaryRow label="Target cycle" value={`${TARGET_CYCLE_SECONDS}s`} />
-            <SummaryRow label="Warning threshold" value={`${WARNING_CYCLE_SECONDS}s`} />
           </div>
         </Panel>
 
@@ -361,7 +382,7 @@ export default function SewingDashboardPage() {
             <SummaryRow label="Model version" value="state-v0.3-demo" />
             <SummaryRow label="Video source" value="Overhead CAM-01" />
             <SummaryRow label="State window" value="1.5s stable" />
-            <SummaryRow label="Annotation file" value="state_segments.csv" />
+            <SummaryRow label="Recent confidence" value={recentAverageConfidence ? `${recentAverageConfidence}%` : "—"} />
           </div>
         </Panel>
       </div>
@@ -527,16 +548,6 @@ function RuleRow({ label, value, active }: { label: string; value: string; activ
   );
 }
 
-function WarningRow({ icon, label, value, tone }: { icon: ReactNode; label: string; value: string | number; tone: "ok" | "warn" | "bad" }) {
-  return (
-    <div className="warning-row">
-      <span className={tone}>{icon}</span>
-      <span>{label}</span>
-      <strong className={tone}>{value}</strong>
-    </div>
-  );
-}
-
 function SummaryRow({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="summary-row">
@@ -546,43 +557,177 @@ function SummaryRow({ label, value }: { label: string; value: string | number })
   );
 }
 
-function CycleTrend({ cycles }: { cycles: CycleRecord[] }) {
-  const max = Math.max(...cycles.map((cycle) => cycle.cycleTime), WARNING_CYCLE_SECONDS);
-  const points = cycles.map((cycle, index) => {
-    const x = cycles.length <= 1 ? 0 : (index / (cycles.length - 1)) * 100;
-    const y = 100 - (cycle.cycleTime / max) * 78 - 10;
-    return `${x},${y}`;
+type SewingIoTEvent = ReturnType<typeof useSewingStore.getState>["iotEvents"][number];
+type DowntimeCycle = { id: string; startedAt: Date; durationSeconds: number; status: "active" | "closed" };
+
+function useNowMs(active: boolean) {
+  const [nowMs, setNowMs] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [active]);
+
+  return nowMs;
+}
+
+function buildDowntimeCycles(events: SewingIoTEvent[], downtimeActive: boolean, downtimeStartTime: Date | null, nowMs: number): DowntimeCycle[] {
+  const cycles: DowntimeCycle[] = [];
+  const starts = [...events]
+    .filter((event) => event.type === "downtime_triggered")
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const resolved = [...events]
+    .filter((event) => event.type === "downtime_resolved")
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  if (downtimeActive && downtimeStartTime) {
+    cycles.push({
+      id: "active-downtime",
+      startedAt: new Date(downtimeStartTime),
+      durationSeconds: Math.max(Math.floor((nowMs - new Date(downtimeStartTime).getTime()) / 1000), 0),
+      status: "active",
+    });
+  }
+
+  resolved.forEach((event, index) => {
+    cycles.push({
+      id: event.id,
+      startedAt: starts[index] ? new Date(starts[index].timestamp) : new Date(event.timestamp),
+      durationSeconds: event.durationSeconds ?? 0,
+      status: "closed",
+    });
   });
 
+  return cycles.slice(0, 8);
+}
+
+function labelLatestAction(type?: string) {
+  if (!type) return "No operator actions";
+  if (type === "rework_triggered") return "Rework started";
+  if (type === "rework_resolved") return "Rework resolved";
+  if (type === "downtime_triggered") return "Downtime started";
+  return "Downtime resolved";
+}
+
+function DowntimeChart({ cycles }: { cycles: DowntimeCycle[] }) {
+  const max = Math.max(...cycles.map((cycle) => cycle.durationSeconds), 60);
+
+  if (!cycles.length) {
+    return (
+      <div className="empty-chart">
+        <Timer size={18} />
+        <span>No downtime cycles yet. Trigger downtime in the demo panel to populate this chart.</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="chart-panel">
-      <svg className="line-chart" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Cycle time line chart">
-        <line x1="0" y1={100 - (TARGET_CYCLE_SECONDS / max) * 78 - 10} x2="100" y2={100 - (TARGET_CYCLE_SECONDS / max) * 78 - 10} className="target-line" />
-        <polyline points={points.join(" ")} className="cycle-line" />
-        {cycles.map((cycle, index) => {
-          const [x, y] = points[index].split(",");
-          return <circle key={cycle.id} cx={x} cy={y} r="1.8" className={cycle.cycleTime <= TARGET_CYCLE_SECONDS ? "point-ok" : cycle.cycleTime <= WARNING_CYCLE_SECONDS ? "point-warn" : "point-bad"} />;
-        })}
-      </svg>
+    <div className="chart-panel downtime-chart">
+      <div className="downtime-list-chart" role="img" aria-label="Bar chart showing recent downtime durations">
+        {cycles.map((cycle, index) => (
+          <div key={cycle.id} className={`downtime-row ${cycle.status}`}>
+            <div className="downtime-row-label">
+              <strong>{cycle.status === "active" ? "Active" : `Downtime ${index + 1}`}</strong>
+              <span>{formatTime(cycle.startedAt)}</span>
+            </div>
+            <div className="downtime-row-track">
+              <div style={{ width: `${Math.max((cycle.durationSeconds / max) * 100, 8)}%` }} />
+            </div>
+            <strong className="downtime-row-value">{formatDuration(cycle.durationSeconds)}</strong>
+          </div>
+        ))}
+      </div>
       <div className="chart-legend">
-        <span><Timer size={14} /> Target {TARGET_CYCLE_SECONDS}s</span>
-        <span>Latest {cycles.at(-1)?.cycleTime ?? "—"}s</span>
+        <span><Timer size={14} /> Red bars are closed downtime cycles</span>
+        <span>Outlined bar is active downtime</span>
       </div>
     </div>
   );
 }
 
-function CountTrend({ cycles }: { cycles: CycleRecord[] }) {
-  const firstPiece = cycles[0]?.piece ?? INITIAL_PIECES;
+function CycleTrend({ cycles }: { cycles: CycleRecord[] }) {
+  const max = Math.max(...cycles.map((cycle) => cycle.cycleTime), WARNING_CYCLE_SECONDS + 10);
+  const average = cycles.length ? cycles.reduce((sum, cycle) => sum + cycle.cycleTime, 0) / cycles.length : 0;
+  const latest = cycles.at(-1);
 
   return (
-    <div className="count-bars">
-      {cycles.map((cycle) => (
-        <div key={cycle.id} className="count-bar-wrap">
-          <div className="count-bar" style={{ height: `${Math.max((cycle.piece - firstPiece + 1) * 9, 18)}%` }} />
-          <span>{cycle.piece}</span>
+    <div className="chart-panel readable-chart">
+      <div className="chart-summary-grid">
+        <ChartInsight label="Best cycle" value={cycles.length ? `${Math.min(...cycles.map((cycle) => cycle.cycleTime))}s` : "—"} tone="ok" />
+        <ChartInsight label="Average" value={average ? `${average.toFixed(1)}s` : "—"} tone={cycleTone(average)} />
+        <ChartInsight label="Latest piece" value={latest ? `#${latest.piece} · ${latest.cycleTime}s` : "—"} tone={cycleTone(latest?.cycleTime ?? 0)} />
+      </div>
+      <div className="cycle-bars-chart" role="img" aria-label="Bar chart showing cycle seconds for each recent piece">
+        <div className="cycle-target-line" style={{ bottom: `${(TARGET_CYCLE_SECONDS / max) * 100}%` }}>
+          <span>Target {TARGET_CYCLE_SECONDS}s</span>
         </div>
-      ))}
+        <div className="cycle-warning-line" style={{ bottom: `${(WARNING_CYCLE_SECONDS / max) * 100}%` }}>
+          <span>Warning {WARNING_CYCLE_SECONDS}s</span>
+        </div>
+        {cycles.map((cycle) => (
+          <div key={cycle.id} className="cycle-column">
+            <div
+              className={`cycle-bar-detailed ${cycleTone(cycle.cycleTime)}`}
+              style={{ height: `${Math.max((cycle.cycleTime / max) * 100, 12)}%` }}
+              title={`Piece #${cycle.piece}: ${cycle.cycleTime} seconds`}
+            >
+              <strong>{cycle.cycleTime}s</strong>
+            </div>
+            <span>#{cycle.piece}</span>
+          </div>
+        ))}
+      </div>
+      <div className="chart-legend">
+        <span><Timer size={14} /> Green is on target</span>
+        <span>Yellow needs attention</span>
+        <span>Red is too slow</span>
+      </div>
+    </div>
+  );
+}
+
+function CountTrend({ cycles, target }: { cycles: CycleRecord[]; target: number }) {
+  const firstPiece = cycles[0]?.piece ?? INITIAL_PIECES;
+  const latest = cycles.at(-1)?.piece ?? firstPiece;
+  const progress = Math.min((latest / target) * 100, 100);
+
+  return (
+    <div className="chart-panel readable-chart">
+      <div className="count-progress">
+        <div>
+          <span className="meta-label">Current total</span>
+          <strong>{latest} pieces</strong>
+        </div>
+        <div>
+          <span className="meta-label">Demo target</span>
+          <strong>{target} pieces</strong>
+        </div>
+      </div>
+      <div className="progress-track" aria-label={`${Math.round(progress)} percent of target complete`}>
+        <div className="progress-fill" style={{ width: `${progress}%` }} />
+        <span>{Math.round(progress)}%</span>
+      </div>
+      <div className="count-step-chart">
+        {cycles.map((cycle) => (
+          <div key={cycle.id} className="count-step">
+            <strong>#{cycle.piece}</strong>
+            <span>{formatClock(cycle.completedAt)}</span>
+          </div>
+        ))}
+      </div>
+      <div className="chart-legend">
+        <span>Each block means one count was accepted after sewing.</span>
+      </div>
+    </div>
+  );
+}
+
+function ChartInsight({ label, value, tone }: { label: string; value: string; tone: "ok" | "warn" | "bad" | "cyan" }) {
+  return (
+    <div className="chart-insight">
+      <span>{label}</span>
+      <strong className={tone}>{value}</strong>
     </div>
   );
 }

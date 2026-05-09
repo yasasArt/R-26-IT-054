@@ -1,8 +1,13 @@
 // components/layout/DemoPanelDrawer.tsx
 "use client";
 import { useEffect } from "react";
-import { X, Zap, Keyboard } from "lucide-react";
+import { Keyboard, ScanLine, Shirt, TimerReset, TriangleAlert, X, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { generateDetectionEvent } from "@/lib/mock/sewing.mock";
+import { generateGarmentAnalysis } from "@/lib/mock/quality.mock";
+import { useQualityStore } from "@/store/qualityStore";
+import { useSewingStore } from "@/store/sewingStore";
+import { useWorkstationStore } from "@/store/workstationStore";
 
 interface DemoPanelDrawerProps {
   isOpen: boolean;
@@ -10,6 +15,14 @@ interface DemoPanelDrawerProps {
 }
 
 export function DemoPanelDrawer({ isOpen, onClose }: DemoPanelDrawerProps) {
+  const { config } = useWorkstationStore();
+  const sewing = useSewingStore();
+  const quality = useQualityStore();
+  const isSewing = config.mode === "sewing";
+  const reworkCount = sewing.totalReworkCount + (sewing.reworkActive ? 1 : 0);
+  const downtimeCount = sewing.iotEvents.filter((event) => event.type === "downtime_resolved").length + (sewing.downtimeActive ? 1 : 0);
+  const latestSewingEvent = sewing.iotEvents[0] || sewing.detectionLog[0];
+
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -18,6 +31,26 @@ export function DemoPanelDrawer({ isOpen, onClose }: DemoPanelDrawerProps) {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
+
+  function addPiece() {
+    const event = generateDetectionEvent(sewing.pieceCount + 1);
+    sewing.incrementPiece({
+      timestamp: event.timestamp,
+      pieceNumber: event.pieceNumber,
+      cycleTimeSeconds: event.cycleTimeSeconds,
+      operatorStatus: event.operatorStatus,
+      confidenceScore: event.confidenceScore,
+      signalA: event.signalA,
+      signalB: event.signalB,
+    });
+  }
+
+  function addInspection() {
+    const analysis = generateGarmentAnalysis();
+    quality.setIsAnalysing(true);
+    quality.setCurrentGarment(analysis);
+    window.setTimeout(() => quality.recordInspection(analysis), 600);
+  }
 
   return (
     <>
@@ -41,7 +74,7 @@ export function DemoPanelDrawer({ isOpen, onClose }: DemoPanelDrawerProps) {
         )}
       >
         {/* Header */}
-        <div className="h-14 border-b border-card-border px-4 flex items-center justify-between flex-shrink-0">
+        <div className="h-12 border-b border-card-border px-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <Zap size={14} className="text-orange" />
             <span className="text-[11px] font-mono font-bold text-orange uppercase tracking-[3px]">
@@ -56,25 +89,81 @@ export function DemoPanelDrawer({ isOpen, onClose }: DemoPanelDrawerProps) {
           </button>
         </div>
 
-        {/* Body — Phase 5 placeholder */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6">
-          <div className="w-14 h-14 rounded-2xl bg-orange/10 border border-orange/20 flex items-center justify-center">
-            <Zap size={24} className="text-orange/60" />
-          </div>
-          <div className="text-center space-y-1">
-            <div className="text-sm font-display font-semibold text-text-primary">
-              Demo Control Panel
+        <div className="flex-1 overflow-y-auto p-3">
+          <div className="grid gap-2">
+            <div className="panel" style={{ boxShadow: "none", padding: 10 }}>
+              <div className="meta-label">Active demo mode</div>
+              <strong>{isSewing ? "Sewing workstation" : "Quality inspection"}</strong>
             </div>
-            <div className="text-xs font-mono text-text-muted">
-              Event injection & simulation
+
+            <div className="panel" style={{ boxShadow: "none", padding: 10 }}>
+              <div className="meta-label">Current records</div>
+              <div className="grid" style={{ gap: 6, marginTop: 8 }}>
+                {isSewing ? (
+                  <>
+                    <DemoFact label="Pieces" value={sewing.pieceCount} />
+                    <DemoFact label="Rework cycles" value={reworkCount} />
+                    <DemoFact label="Downtime cycles" value={downtimeCount} />
+                    <DemoFact label="Machine" value={sewing.downtimeActive ? "Downtime" : sewing.reworkActive ? "Rework" : "Running"} />
+                  </>
+                ) : (
+                  <>
+                    <DemoFact label="Inspections" value={quality.inspectionLog.length} />
+                    <DemoFact label="Pass rate" value={quality.inspectionLog.length ? `${Math.round((quality.approvedCount / quality.inspectionLog.length) * 100)}%` : "—"} />
+                    <DemoFact label="Rework" value={quality.reworkCount} />
+                    <DemoFact label="Mismatch" value={quality.mismatchCount} />
+                  </>
+                )}
+              </div>
             </div>
-            <div className="text-[10px] font-mono text-dim mt-2">
-              Coming in Phase 5
+
+            <div className="grid" style={{ gap: 7 }}>
+              <button className="btn btn-primary" onClick={isSewing ? addPiece : addInspection}>
+                {isSewing ? <Shirt size={16} /> : <ScanLine size={16} />}
+                {isSewing ? "Add detected piece" : "Run inspection"}
+              </button>
+              {isSewing ? (
+                <>
+                  <button className="btn" onClick={sewing.reworkActive ? sewing.endRework : sewing.startRework}>
+                    <TriangleAlert size={16} />
+                    {sewing.reworkActive ? "Resolve rework" : "Trigger rework"}
+                  </button>
+                  <button className="btn btn-danger" onClick={sewing.downtimeActive ? sewing.endDowntime : sewing.startDowntime}>
+                    <TriangleAlert size={16} />
+                    {sewing.downtimeActive ? "Resolve downtime" : "Trigger downtime"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="btn" onClick={() => quality.setCalibration({ status: "error" })}>
+                    <TriangleAlert size={16} />
+                    Calibration error
+                  </button>
+                  <button className="btn btn-success" onClick={() => quality.setCalibration({ status: "calibrated", pixelPerCmRatio: 18.4, lastCalibratedAt: new Date() })}>
+                    <ScanLine size={16} />
+                    Restore calibration
+                  </button>
+                </>
+              )}
             </div>
+
+            {isSewing && (
+              <div className="panel" style={{ boxShadow: "none", padding: 10 }}>
+                <div className="meta-label">Action balance</div>
+                <div className="demo-action-chart">
+                  <DemoActionBar label="Rework" value={reworkCount} total={reworkCount + downtimeCount} tone="warn" />
+                  <DemoActionBar label="Downtime" value={downtimeCount} total={reworkCount + downtimeCount} tone="bad" />
+                </div>
+                <div className="demo-latest-event">
+                  <TimerReset size={13} />
+                  <span>{latestSewingEvent ? "Latest sewing event recorded" : "No sewing demo events yet"}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Keyboard shortcut reminder */}
-          <div className="mt-4 flex items-center gap-2 bg-surface border border-card-border rounded-badge px-3 py-2">
+          <div className="mt-3 flex items-center gap-2 bg-surface border border-card-border rounded-badge px-3 py-2">
             <Keyboard size={11} className="text-text-muted" />
             <span className="text-[10px] font-mono text-text-muted">
               Toggle:{" "}
@@ -94,5 +183,29 @@ export function DemoPanelDrawer({ isOpen, onClose }: DemoPanelDrawerProps) {
         </div>
       </div>
     </>
+  );
+}
+
+function DemoFact({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12 }}>
+      <span className="text-text-muted">{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function DemoActionBar({ label, value, total, tone }: { label: string; value: number; total: number; tone: "warn" | "bad" }) {
+  const width = total ? Math.max((value / total) * 100, value ? 12 : 0) : 0;
+  return (
+    <div className="demo-action-row">
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+      <div className="demo-action-track">
+        <div className={tone} style={{ width: `${width}%` }} />
+      </div>
+    </div>
   );
 }
