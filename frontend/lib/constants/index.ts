@@ -99,15 +99,6 @@ export const SIMULATION = {
 
 export const PRODUCTION_SPECS: IProductionSpec[] = [
   {
-    specId: "POLO-A3",
-    specLabel: "POLO-A3",
-    expectedStyle: "Polo",
-    expectedSize: "M",
-    expectedColours: ["Navy Blue"],
-    widthToleranceCm: 1.5,
-    heightToleranceCm: 2.0,
-  },
-  {
     specId: "TEE-B1",
     specLabel: "TEE-B1",
     expectedStyle: "T-Shirt",
