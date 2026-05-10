@@ -2,7 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Camera, Cpu, MonitorCog, Ruler, Shirt, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Camera,
+  CheckCircle2,
+  Cpu,
+  MonitorCog,
+  Ruler,
+  Shirt,
+  UserRound,
+} from "lucide-react";
 import { APP_NAME, APP_SUBTITLE, PRODUCTION_SPECS, ROUTES } from "@/lib/constants";
 import type { AreaMode } from "@/lib/types";
 import { useQualityStore } from "@/store/qualityStore";
@@ -11,6 +21,40 @@ import { Panel, StatusPill } from "@/components/industrial/Primitives";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 type Step = 1 | 2 | 3;
+
+type ModeMeta = {
+  title: string;
+  summary: string;
+  badge: string;
+  badgeTone: "ok" | "info" | "cyan";
+  supportLabel: string;
+  dashboardLabel: string;
+  bestFor: string;
+  visualTone: string;
+};
+
+const MODE_META: Record<AreaMode, ModeMeta> = {
+  sewing: {
+    title: "Sewing Operator Area",
+    summary: "Monitor piece flow, cycle timing, and operator actions from the live workstation.",
+    badge: "Camera + IoT",
+    badgeTone: "ok",
+    supportLabel: "ESP32 controls",
+    dashboardLabel: "Production dashboard",
+    bestFor: "Operator tracking",
+    visualTone: "sewing",
+  },
+  quality: {
+    title: "Quality Checker Area",
+    summary: "Inspect garment specs, colour, and measurement checks from the quality station.",
+    badge: "Camera only",
+    badgeTone: "info",
+    supportLabel: "Spec validation",
+    dashboardLabel: "Inspection dashboard",
+    bestFor: "Quality checking",
+    visualTone: "quality",
+  },
+};
 
 export default function SetupPage() {
   const router = useRouter();
@@ -51,7 +95,7 @@ export default function SetupPage() {
   }
 
   return (
-    <main className="setup-page">
+    <main className={`setup-page setup-page-step-${step}`}>
       <header className="setup-header">
         <div className="brand">
           <div className="brand-mark"><MonitorCog size={22} /></div>
@@ -68,57 +112,89 @@ export default function SetupPage() {
         </div>
       </header>
 
-      <section className="setup-main animate-in">
-        <div className="page-head">
+      <section className={`setup-main animate-in setup-main-step-${step}`}>
+        <div className={`page-head setup-page-head ${step === 1 ? "setup-page-head-step1" : ""}`}>
           <div>
             <div className="eyebrow">Configuration wizard · Step {step} of 3</div>
             <h1 className="page-title">
               {step === 1 ? "Select workstation area mode" : step === 2 ? "Confirm local devices" : "Start production session"}
             </h1>
-            <p className="muted" style={{ maxWidth: 680, lineHeight: 1.5, fontSize: 12.5, marginTop: 5 }}>
-              This prototype is a single configurable local station. The selected mode controls the dashboard, device expectations, and simulated data stream.
+            <p className="page-description">
+              {step === 1
+                ? "Choose the production area so the workstation loads the correct live dashboard and controls."
+                : step === 2
+                  ? "Review connected camera and mode-specific devices before opening the live interface."
+                  : "Confirm the operator and final session settings for this local prototype run."}
             </p>
           </div>
           {error && <StatusPill label={error} tone="bad" />}
         </div>
 
         {step === 1 && (
-          <div className="grid grid-2">
-            <button className={`panel mode-card ${mode === "sewing" ? "selected" : ""}`} onClick={() => setMode("sewing")}>
-              <div className="mode-visual">
-                <div className="camera-overlay" />
-                <div style={{ position: "absolute", left: 24, top: 28 }}><StatusPill label="Camera + IoT" tone="ok" /></div>
-                <Shirt size={72} style={{ position: "absolute", left: "calc(50% - 36px)", top: 58, color: "var(--cyan)" }} />
-                <Cpu size={28} style={{ position: "absolute", right: 28, bottom: 24, color: "var(--green)" }} />
-              </div>
-              <div className="panel-body">
-                <h2 className="panel-title">Sewing Operator Area</h2>
-                <p className="muted">Feature 2: piece counting, cycle-time analysis, rework and downtime actions through IoT.</p>
-                <div className="segmented">
-                  <StatusPill label="Output zone camera" tone="cyan" />
-                  <StatusPill label="ESP32 required" tone="ok" />
-                  <StatusPill label="Cycle timing" tone="info" />
-                </div>
-              </div>
-            </button>
+          <div className="setup-mode-grid setup-mode-grid-focused">
+            {(["sewing", "quality"] as AreaMode[]).map(areaMode => {
+              const meta = MODE_META[areaMode];
+              const isSelected = mode === areaMode;
 
-            <button className={`panel mode-card ${mode === "quality" ? "selected" : ""}`} onClick={() => setMode("quality")}>
-              <div className="mode-visual">
-                <div className="camera-overlay" />
-                <div style={{ position: "absolute", left: 24, top: 28 }}><StatusPill label="Camera only" tone="info" /></div>
-                <Ruler size={70} style={{ position: "absolute", left: "calc(50% - 35px)", top: 58, color: "var(--accent)" }} />
-                <Camera size={28} style={{ position: "absolute", right: 28, bottom: 24, color: "var(--cyan)" }} />
-              </div>
-              <div className="panel-body">
-                <h2 className="panel-title">Quality Checker Area</h2>
-                <p className="muted">Features 3 + 4: colour recognition, style recognition, and size measurement using one fixed camera.</p>
-                <div className="segmented">
-                  <StatusPill label="No IoT" tone="warn" />
-                  <StatusPill label="Spec matching" tone="info" />
-                  <StatusPill label="Calibration" tone="cyan" />
-                </div>
-              </div>
-            </button>
+              return (
+                <button
+                  key={areaMode}
+                  className={`panel mode-card mode-card-enhanced setup-mode-card ${isSelected ? "selected" : ""}`}
+                  onClick={() => setMode(areaMode)}
+                  type="button"
+                >
+                  <div className={`mode-visual mode-visual-${meta.visualTone}`}>
+                    <div className="camera-overlay" />
+                    <div className="mode-badge">
+                      <StatusPill label={meta.badge} tone={meta.badgeTone} />
+                    </div>
+                    <div className="mode-select-indicator" aria-hidden="true">
+                      {isSelected ? <CheckCircle2 size={18} /> : <div className="mode-select-ring" />}
+                    </div>
+                    {areaMode === "sewing" ? (
+                      <>
+                        <Shirt className="mode-main-icon" size={46} />
+                        <Cpu className="mode-support-icon ok" size={18} />
+                      </>
+                    ) : (
+                      <>
+                        <Ruler className="mode-main-icon info" size={46} />
+                        <Camera className="mode-support-icon cyan" size={18} />
+                      </>
+                    )}
+                  </div>
+
+                  <div className="panel-body setup-mode-card-body">
+                    <div className="setup-mode-card-head">
+                      <h2 className="panel-title">{meta.title}</h2>
+                      <p className="muted">{meta.summary}</p>
+                    </div>
+
+                    <div className="setup-mode-meta-grid">
+                      <div className="setup-mode-meta-item">
+                        <span className="meta-label">Dashboard</span>
+                        <strong>{meta.dashboardLabel}</strong>
+                      </div>
+                      <div className="setup-mode-meta-item">
+                        <span className="meta-label">Support</span>
+                        <strong>{meta.supportLabel}</strong>
+                      </div>
+                      <div className="setup-mode-meta-item setup-mode-meta-item-wide">
+                        <span className="meta-label">Best for</span>
+                        <strong>{meta.bestFor}</strong>
+                      </div>
+                    </div>
+
+                    <div className="setup-mode-card-footer">
+                      <span className={`setup-mode-selection ${isSelected ? "selected" : ""}`}>
+                        {isSelected ? "Selected" : "Click to select"}
+                      </span>
+                      <ArrowRight size={16} />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -226,7 +302,7 @@ export default function SetupPage() {
           </div>
         )}
 
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 20 }}>
+        <div className="setup-actions">
           <button className="btn" onClick={back}><ArrowLeft size={16} /> Back</button>
           <button className={step === 3 ? "btn btn-success" : "btn btn-primary"} onClick={next}>
             {step === 3 ? <UserRound size={16} /> : null}
@@ -241,7 +317,7 @@ export default function SetupPage() {
 
 function DeviceFact({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="panel" style={{ boxShadow: "none", padding: 14 }}>
+    <div className="panel device-fact">
       <div className="meta-label">{label}</div>
       <strong>{value}</strong>
     </div>
