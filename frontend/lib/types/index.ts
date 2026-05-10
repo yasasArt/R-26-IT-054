@@ -12,7 +12,7 @@ export type QualityDecision = "PASS" | "REWORK" | "MISMATCH";
 
 export type GarmentSize = "S" | "M" | "L" | "XL" | "Unknown";
 
-export type GarmentStyle = "T-Shirt" | "Polo" | "Pants" | "Skinny" | "Unknown";
+export type GarmentStyle = "T-Shirt" | "Pants" | "Skinny" | "Unknown";
 
 export type SignalStatus = "triggered" | "waiting" | "idle";
 
@@ -168,7 +168,7 @@ export interface ICalibrationData {
 
 export interface IProductionSpec {
   specId: string;
-  specLabel: string; // e.g. "POLO-A3"
+  specLabel: string; // e.g. "TEE-B1"
   expectedStyle: GarmentStyle;
   expectedSize: GarmentSize;
   expectedColours: string[]; // colour names
