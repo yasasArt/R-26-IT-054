@@ -161,15 +161,36 @@ export default function SetupPage() {
                     <span className="meta-label">Active spec</span>
                     <select className="select" value={specId} onChange={event => setSpecId(event.target.value)}>
                       {PRODUCTION_SPECS.map(spec => (
-                        <option key={spec.specId} value={spec.specId}>{spec.specLabel} | {spec.expectedStyle} {spec.expectedSize}</option>
+                        <option key={spec.specId} value={spec.specId}>
+                          {spec.specLabel} | {spec.expectedStyle}
+                        </option>
                       ))}
                     </select>
                   </label>
-                  <div className="grid grid-2">
-                    <DeviceFact label="Style" value={selectedSpec.expectedStyle} />
-                    <DeviceFact label="Size" value={selectedSpec.expectedSize} />
-                    <DeviceFact label="Colour" value={selectedSpec.expectedColours.join(", ")} />
-                    <DeviceFact label="Tolerance" value={`±${selectedSpec.widthToleranceCm} cm`} />
+                  <div className="panel" style={{ boxShadow: "none", padding: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div className="brand-mark"><Shirt size={20} /></div>
+                        <div>
+                          <div className="meta-label">Selected production profile</div>
+                          <strong>{selectedSpec.specLabel}</strong>
+                        </div>
+                      </div>
+                      <StatusPill label="Ready for scan" tone="ok" />
+                    </div>
+
+                    <div className="segmented" style={{ marginTop: 14 }}>
+                      <StatusPill label={selectedSpec.expectedStyle} tone="info" />
+                      <StatusPill label={`Size ${selectedSpec.expectedSize}`} tone="cyan" />
+                      <StatusPill label={selectedSpec.expectedColours.join(", ")} tone="ok" />
+                      <StatusPill label={`+/-${selectedSpec.widthToleranceCm} cm`} tone="warn" />
+                    </div>
+
+                    <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+                      <SpecCheckRow label="Vision checks" value="Style, colour, and size match" />
+                      <SpecCheckRow label="Measurement rule" value={`Width +/-${selectedSpec.widthToleranceCm} cm, height +/-${selectedSpec.heightToleranceCm} cm`} />
+                      <SpecCheckRow label="Inspection output" value="Pass, rework, or mismatch decision" />
+                    </div>
                   </div>
                 </div>
               </Panel>
@@ -223,6 +244,15 @@ function DeviceFact({ label, value }: { label: string; value: string | number })
     <div className="panel" style={{ boxShadow: "none", padding: 14 }}>
       <div className="meta-label">{label}</div>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function SpecCheckRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, borderTop: "1px solid var(--line-soft)", paddingTop: 10 }}>
+      <span className="muted">{label}</span>
+      <strong style={{ textAlign: "right" }}>{value}</strong>
     </div>
   );
 }
