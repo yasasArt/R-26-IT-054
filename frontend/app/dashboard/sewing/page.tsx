@@ -248,50 +248,112 @@ export default function SewingDashboardPage() {
         <Panel
           title="Live State Video Overlay"
           eyebrow="Garment + pose + temporal state"
-          action={<StatusPill label={STATE_META[session.currentState].label} tone={STATE_META[session.currentState].tone} pulse />}
+          action={
+            <StatusPill
+              label={STATE_META[session.currentState].label}
+              tone={STATE_META[session.currentState].tone}
+              pulse
+            />
+          }
           className="span-2"
         >
           <CameraFrame mode="sewing">
-            <div className={`state-video state-${session.currentState}`}>
+            <div
+              className={[
+                "state-video",
+                `state-${session.currentState}`,
+                currentStep.garmentMotion ? "garment-moving" : "",
+                `visibility-${currentStep.visibility}`,
+              ].join(" ")}
+            >
+              <div className="video-grid-overlay" />
+
               <div className="machine-bed">
                 <div className="needle" />
+                <div className="needle-glow" />
                 <span>Machine area</span>
               </div>
-              <div className={`garment-blob ${currentStep.garmentMotion ? "moving" : ""}`} />
-              <div className="pose-line arm-left" />
-              <div className="pose-line arm-right" />
-              <div className="pose-dot shoulder" />
-              <div className="pose-dot wrist" />
-              <div className={`garment-box visibility-${currentStep.visibility}`}>
-                <span>Garment track</span>
+
+              <div className="garment-transfer-path">
+                <span className="path-dot path-dot-1" />
+                <span className="path-dot path-dot-2" />
+                <span className="path-dot path-dot-3" />
               </div>
+
+              <div className="garment-layer">
+                <div className="garment-shadow" />
+                <div className={`garment-blob ${currentStep.garmentMotion ? "moving" : ""}`} />
+                <div className={`garment-box visibility-${currentStep.visibility}`}>
+                  <div className="track-corners corner-tl" />
+                  <div className="track-corners corner-tr" />
+                  <div className="track-corners corner-bl" />
+                  <div className="track-corners corner-br" />
+                  <div className="track-scan-line" />
+                  <span>Garment track</span>
+                </div>
+              </div>
+
+              <div className="machine-pulse-ring" />
+
               <div className="state-label-card">
-                <span>{STATE_META[session.currentState].short}</span>
-                <strong>{Math.round(currentStep.confidence * 100)}%</strong>
+                <div className="state-label-top">
+                  <span>{STATE_META[session.currentState].short}</span>
+                  <strong>{Math.round(currentStep.confidence * 100)}%</strong>
+                </div>
+                <div className="confidence-bar">
+                  <div
+                    className="confidence-bar-fill"
+                    style={{ width: `${Math.round(currentStep.confidence * 100)}%` }}
+                  />
+                </div>
               </div>
+
               {currentStep.visibility !== "clear" && (
                 <div className={`occlusion-band visibility-${currentStep.visibility}`}>
                   <Eye size={16} />
                   {visibilityLabel(currentStep.visibility)}
                 </div>
               )}
-            </div>
-            <div className="camera-caption">
-              <StatusPill label={`state ${session.currentState}`} tone={STATE_META[session.currentState].tone} />
-              <StatusPill label={`motion ${currentStep.garmentMotion ? "confirmed" : "none"}`} tone={currentStep.garmentMotion ? "ok" : "muted"} />
-              <StatusPill label={`min confidence ${Math.round(MIN_CONFIDENCE * 100)}%`} tone="info" />
+
+              <div className="timeline-indicator">
+                <div className="timeline-wave" />
+              </div>
             </div>
           </CameraFrame>
         </Panel>
 
         <div className="grid live-monitor-support span-2">
-          <Panel title="Transition Decision Engine" eyebrow="False-count prevention" action={<ShieldCheck size={18} className="ok" />}>
+          <Panel
+            title="Transition Decision Engine"
+            eyebrow="False-count prevention"
+            action={<ShieldCheck size={18} className="ok" />}
+          >
             <div className="decision-stack">
-              <RuleRow label="Required transition" value="sewing -> put_aside" active={session.previousState === "sewing" && session.currentState === "put_aside"} />
-              <RuleRow label="Confidence gate" value={`${Math.round(currentStep.confidence * 100)}% / ${Math.round(MIN_CONFIDENCE * 100)}%`} active={currentStep.confidence >= MIN_CONFIDENCE} />
-              <RuleRow label="Visibility gate" value={visibilityLabel(currentStep.visibility)} active={currentStep.visibility !== "blocked"} />
-              <RuleRow label="Garment motion" value={currentStep.garmentMotion ? "Outgoing transfer" : "No new transfer"} active={currentStep.garmentMotion} />
-              <RuleRow label="Cooldown" value="Await next sewing state" active={session.currentState !== "put_aside" || session.previousState === "sewing"} />
+              <RuleRow
+                label="Required transition"
+                value="sewing -> put_aside"
+                active={session.previousState === "sewing" && session.currentState === "put_aside"}
+              />
+              <RuleRow
+                label="Confidence gate"
+                value={`${Math.round(currentStep.confidence * 100)}% / ${Math.round(MIN_CONFIDENCE * 100)}%`}
+                active={currentStep.confidence >= MIN_CONFIDENCE}
+              />
+              <RuleRow
+                label="Visibility gate"
+                value={visibilityLabel(currentStep.visibility)}
+                active={currentStep.visibility !== "blocked"}
+              />
+              <RuleRow
+                label="Garment motion"
+                value={currentStep.garmentMotion ? "Outgoing transfer" : "No new transfer"}
+                active={currentStep.garmentMotion}
+              />
+              <RuleRow
+                label="Cooldown"
+                value="Await next sewing state"
+                active={session.currentState !== "put_aside" || session.previousState === "sewing"}
+              />
             </div>
           </Panel>
 
@@ -302,15 +364,23 @@ export default function SewingDashboardPage() {
                 <small>{currentCycleSeconds ? "sec" : "waiting"}</small>
               </div>
               <div className="cycle-meter-copy">
-                <strong>{session.activeCycleStart === null ? "No active garment cycle" : "Timing current garment"}</strong>
-                <span>{session.activeCycleStart === null ? "Timer starts when stable sewing begins." : "Timer closes only on accepted put_aside."}</span>
+                <strong>
+                  {session.activeCycleStart === null
+                    ? "No active garment cycle"
+                    : "Timing current garment"}
+                </strong>
+                <span>
+                  {session.activeCycleStart === null
+                    ? "Timer starts when stable sewing begins."
+                    : "Timer closes only on accepted put_aside."}
+                </span>
               </div>
             </div>
           </Panel>
         </div>
       </div>
 
-      <div className="grid workflow-side-grid">
+      {/* <div className="grid workflow-side-grid">
         <Panel title="Recent Counting Decisions" eyebrow="What the system accepted or rejected" className="span-2">
           <div className="timeline-strip">
             {session.transitions.slice(0, 9).map((transition) => (
@@ -322,7 +392,7 @@ export default function SewingDashboardPage() {
             ))}
           </div>
         </Panel>
-      </div>
+      </div> */}
 
       <div className="grid grid-3 analytics-grid">
         <Panel title="Rework and Downtime Details" eyebrow="Operator action status">
