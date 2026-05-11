@@ -5,7 +5,8 @@ import { CheckCircle2, Ruler, Shirt, SwatchBook } from "lucide-react";
 import { useQualitySimulator } from "@/lib/hooks/useQualitySimulator";
 import { formatCm, formatTime } from "@/lib/utils";
 import { useQualityStore } from "@/store/qualityStore";
-import { CameraFrame, DataTable, MetricCard, MiniBarChart, PageHeader, Panel, StatusPill } from "@/components/industrial/Primitives";
+import { RegionalSizeConversionCard } from "@/components/dashboard/quality/RegionalSizeConversionCard";
+import { CameraFrame, DataTable, MetricCard, PageHeader, Panel, StatusPill } from "@/components/industrial/Primitives";
 
 export default function QualityDashboardPage() {
   useQualitySimulator("1x");
@@ -80,16 +81,7 @@ export default function QualityDashboardPage() {
           />
         </Panel>
 
-        <Panel title="Inspection Mix" eyebrow="Session distribution">
-          <div className="panel-body">
-            <MiniBarChart values={[quality.approvedCount, quality.reworkCount, quality.mismatchCount].map(v => Math.max(v, 1))} tone="info" />
-            <div className="segmented">
-              <StatusPill label="Pass" tone="ok" />
-              <StatusPill label="Rework" tone="warn" />
-              <StatusPill label="Mismatch" tone="bad" />
-            </div>
-          </div>
-        </Panel>
+        <RegionalSizeConversionCard />
       </div>
 
       <div style={{ marginTop: 16 }}>
