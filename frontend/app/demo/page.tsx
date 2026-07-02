@@ -93,7 +93,7 @@ function DemoContent() {
         {isSewing ? (
           <Panel title="Active Sewing Controls" eyebrow="Feature 2">
             <div className="panel-body grid">
-              <button className="btn btn-primary" onClick={addPiece}><Shirt size={17} /> Add detected piece</button>
+              {/* <button className="btn btn-primary" onClick={addPiece}><Shirt size={17} /> Add detected piece</button> */}
               <button className="btn" onClick={sewing.reworkActive ? sewing.endRework : sewing.startRework}><TriangleAlert size={17} /> {sewing.reworkActive ? "Resolve rework" : "Trigger rework"}</button>
               <button className="btn btn-danger" onClick={sewing.downtimeActive ? sewing.endDowntime : sewing.startDowntime}><TriangleAlert size={17} /> {sewing.downtimeActive ? "Resolve downtime" : "Trigger downtime"}</button>
               <button className="btn" onClick={sewing.resetSewingState}><RotateCcw size={17} /> Reset sewing state</button>
