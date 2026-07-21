@@ -1,0 +1,80 @@
+{
+  "mode": "generation",
+  "parameters": {
+    "clip_duration_sec": "1.5",
+    "train_idle_stride_sec": "1.0",
+    "train_sewing_stride_sec": "2.5",
+    "evaluation_stride_sec": "1.5",
+    "boundary_margin_sec": "0.0",
+    "fps": "preserve_source",
+    "width": null,
+    "height": null,
+    "codec": "libx264",
+    "crf": 18,
+    "preset": "medium",
+    "pixel_format": "yuv420p",
+    "audio": "removed"
+  },
+  "planned_clip_count": 6024,
+  "counts": {
+    "train": {
+      "IDLE_SETUP": 2023,
+      "SEWING": 2005
+    },
+    "validation": {
+      "IDLE_SETUP": 302,
+      "SEWING": 693
+    },
+    "test": {
+      "IDLE_SETUP": 306,
+      "SEWING": 695
+    }
+  },
+  "status_counts": {
+    "GENERATED": 6024
+  },
+  "sources": {
+    "train": {
+      "videos.csv": {
+        "path_relative_to_splits_dir": "train/videos.csv",
+        "sha256": "0b094409c5d6f299e513d017a6ec43e86c579144adc3353965c544418cf898db"
+      },
+      "segment_annotation.csv": {
+        "path_relative_to_splits_dir": "train/segment_annotation.csv",
+        "sha256": "18337d981bddf11c092992bab4add4ca2d5be46d0c7bb41b687f9bcc4d823d90"
+      },
+      "events.csv": {
+        "path_relative_to_splits_dir": "train/events.csv",
+        "sha256": "e09375603aa8c27b64090b4a4b6b9eb9d11b5c595b066e34464e538d93642017"
+      }
+    },
+    "validation": {
+      "videos.csv": {
+        "path_relative_to_splits_dir": "validation/videos.csv",
+        "sha256": "17892a7615cc5b246f5ee6af6fa0391076f86aada944e30ff0ef1f1c562ca99f"
+      },
+      "segment_annotation.csv": {
+        "path_relative_to_splits_dir": "validation/segment_annotation.csv",
+        "sha256": "bc09103f1f960b36f9385e0b0bd59151fd262f2b3581028f6d02048c3126483f"
+      },
+      "events.csv": {
+        "path_relative_to_splits_dir": "validation/events.csv",
+        "sha256": "fe9120069d9b129c13554833d08c459b3c0235bd09574ed31fd785561863cc8c"
+      }
+    },
+    "test": {
+      "videos.csv": {
+        "path_relative_to_splits_dir": "test/videos.csv",
+        "sha256": "5a9cd22e4b41cf4ba2db80b1d2dbc33985ac80499116892e802ccef7ee31cd51"
+      },
+      "segment_annotation.csv": {
+        "path_relative_to_splits_dir": "test/segment_annotation.csv",
+        "sha256": "3258ba40f890ff184446d09a4622efde690ae188556f35ae8043dc81f34d92fa"
+      },
+      "events.csv": {
+        "path_relative_to_splits_dir": "test/events.csv",
+        "sha256": "e3da46580259188963e407d511c0176a1128f83b754d252affa730b96ae49989"
+      }
+    }
+  }
+}
