@@ -1,1 +1,8 @@
 .DS_Store
+
+# Feature 2 ignored files
+.vscode
+Feature_2/00-raw-videos/videos
+Feature_2/01-data-annotation-and-dataset-preparation/generated_clips/train
+Feature_2/01-data-annotation-and-dataset-preparation/generated_clips/validation
+Feature_2/01-data-annotation-and-dataset-preparation/generated_clips/test

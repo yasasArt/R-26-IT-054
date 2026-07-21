@@ -1,0 +1,4 @@
+split,video_count,video_percentage,segment_count,event_count,event_percentage,idle_setup_duration_sec,idle_setup_percentage,sewing_duration_sec,sewing_percentage,total_annotated_duration_sec
+train,42,70.000,635,306,69.863,2322.968,69.987,5082.380,69.980,7405.348
+validation,9,15.000,136,66,15.068,497.536,14.990,1089.365,15.000,1586.901
+test,9,15.000,136,66,15.068,498.620,15.023,1090.906,15.021,1589.526
