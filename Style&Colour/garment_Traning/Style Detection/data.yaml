@@ -1,0 +1,14 @@
+path: ./
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 4
+names: ['SHIRT', 'SHORT', 'TROUSER', 'T_SHIRT']
+
+# roboflow:
+#   workspace: yasas-jayaweera
+#   project: style-detection-bv51c
+#   version: 3
+#   license: CC BY 4.0
+#   url: https://universe.roboflow.com/yasas-jayaweera/style-detection-bv51c/dataset/3
