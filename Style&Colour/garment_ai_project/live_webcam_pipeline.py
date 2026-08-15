@@ -2,15 +2,20 @@ import cv2
 import numpy as np
 import requests 
 import sys
+import base64
+import threading
+from flask import Flask, Response
+from flask_cors import CORS
 from ultralytics import YOLO
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION (UPDATED FOR FACTORY CONDITIONS) ---
 MODEL_PATH = "models/best.pt"              
 
-MIN_CONFIDENCE = 0.75          # Confidence එක 75% දක්වා වැඩි කළා (අත්/වෙනත් දේවල් අයින් කිරීමට)
+MIN_CONFIDENCE = 0.80          # 80% දක්වා වැඩි කළා (ෆෝන්/පොත් සහ බොරු දේවල් ප්‍රතික්ෂේප කිරීමට)
 STABILITY_FRAMES = 12          
 COOLDOWN_FRAMES = 45           
-MIN_AREA_RATIO = 0.15          # ඇඳුම අනිවාර්යයෙන්ම Folding Zone එකෙන් 15% ක් වත් ආවරණය කළ යුතුයි (අකුලපු ඇඳුම්/අත් ප්‍රතික්ෂේප කිරීමට)
+MIN_AREA_RATIO = 0.20          # 20% දක්වා වැඩි කළා (ගුලි කරපු ඇඳුම්, පෑන්, පොත් ප්‍රතික්ෂේප කිරීමට)
+MAX_MOVEMENT = 30              # ඇඳුම නිශ්චලව පවතින බව තහවුරු කිරීමට ඉඩ දෙන උපරිම චලනය (පික්සල්)
 
 print("Loading Fast YOLO Model... Please wait.")
 try:
@@ -21,7 +26,33 @@ except Exception as e:
     sys.exit(1)
 
 # ==========================================
-# Background Removal & Advanced Color Detection
+# Video Streaming Server (Flask)
+# ==========================================
+app = Flask(__name__)
+CORS(app)
+
+global_frame = None
+lock = threading.Lock()
+
+def generate_frames():
+    global global_frame
+    while True:
+        with lock:
+            if global_frame is None:
+                continue
+            ret, buffer = cv2.imencode('.jpg', global_frame)
+            if not ret:
+                continue
+        frame_bytes = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+@app.route('/video_feed')
+def video_feed():
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+# ==========================================
+# Background Removal Function
 # ==========================================
 def extract_colors(image_crop):
     if image_crop is None or image_crop.size == 0:
@@ -85,189 +116,176 @@ def extract_colors(image_crop):
 # ==========================================
 # MAIN FACTORY PIPELINE
 # ==========================================
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    print("Error: Could not open webcam.")
-    sys.exit(1)
+def run_opencv_pipeline():
+    global global_frame
+    cap = cv2.VideoCapture(1)
+    if not cap.isOpened():
+        print("Error: Could not open webcam.")
+        sys.exit(1)
 
-frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-if frame_w == 0: frame_w, frame_h = 640, 480
+    frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    if frame_w == 0: frame_w, frame_h = 640, 480
 
-roi_x1 = int(frame_w * 0.15)
-roi_y1 = int(frame_h * 0.20)
-roi_x2 = int(frame_w * 0.85)
-roi_y2 = int(frame_h * 0.95)
+    roi_x1 = int(frame_w * 0.15)
+    roi_y1 = int(frame_h * 0.20)
+    roi_x2 = int(frame_w * 0.85)
+    roi_y2 = int(frame_h * 0.95)
 
-# ඇඳුමේ අවම ප්‍රමාණය ගණනය කිරීම
-roi_area = (roi_x2 - roi_x1) * (roi_y2 - roi_y1)
-MIN_GARMENT_AREA = roi_area * MIN_AREA_RATIO
+    roi_area = (roi_x2 - roi_x1) * (roi_y2 - roi_y1)
+    MIN_GARMENT_AREA = roi_area * MIN_AREA_RATIO
 
-stable_count = 0
-current_tracking_style = ""
-cooldown_timer = 0
+    stable_count = 0
+    current_tracking_style = ""
+    cooldown_timer = 0
+    last_center = None  # අලුතින් එකතු කළ Motion Tracker විචල්‍යය
 
-# 100% පැහැදිලි රූපය තබා ගැනීමට Variables
-best_frame_during_tracking = None
-best_conf_during_tracking = 0.0
-best_box_during_tracking = None
+    best_frame_during_tracking = None
+    best_conf_during_tracking = 0.0
+    best_box_during_tracking = None
 
-dash_img = None
-dash_style = ""
-dash_colors_text = []
+    font = cv2.FONT_HERSHEY_SIMPLEX
 
-font = cv2.FONT_HERSHEY_SIMPLEX
+    print("\n" + "="*50)
+    print("🏭 AI PIPELINE: MOTION TRACKING & STRICT FILTERING ACTIVE")
+    print("="*50 + "\n")
 
-print("\n" + "="*50)
-print("🏭 PACKING AREA PIPELINE ACTIVE")
-print("Camera MUST point down at the table.")
-print("="*50 + "\n")
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret: break
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret: break
+        display_frame = frame.copy()
+        current_state = "NOT READY"
+        box_color = (0, 255, 255) 
 
-    display_frame = frame.copy()
-    current_state = "NOT READY"
-    box_color = (0, 255, 255) # Yellow
+        cv2.rectangle(display_frame, (roi_x1, roi_y1), (roi_x2, roi_y2), (255, 100, 0), 2, cv2.LINE_AA)
+        cv2.putText(display_frame, "FOLDING ZONE", (roi_x1, roi_y1 - 10), font, 0.5, (255, 100, 0), 1)
 
-    cv2.rectangle(display_frame, (roi_x1, roi_y1), (roi_x2, roi_y2), (255, 100, 0), 2, cv2.LINE_AA)
-    cv2.putText(display_frame, "FOLDING ZONE", (roi_x1, roi_y1 - 10), font, 0.5, (255, 100, 0), 1)
-
-    if cooldown_timer > 0:
-        cooldown_timer -= 1
-        current_state = "VALID (SAVED)"
-        box_color = (255, 0, 255) # Purple
-    else:
-        roi_frame = frame[roi_y1:roi_y2, roi_x1:roi_x2]
-        results = model(roi_frame, verbose=False)
-        garment_valid = False
-        
-        if len(results[0].boxes) > 0:
-            best_box = results[0].boxes[0]
-            conf = float(best_box.conf)
-            cls_id = int(best_box.cls)
-            detected_style = model.names[cls_id]
+        if cooldown_timer > 0:
+            cooldown_timer -= 1
+            current_state = "VALID (SAVED)"
+            box_color = (255, 0, 255) 
+            last_center = None
+        else:
+            roi_frame = frame[roi_y1:roi_y2, roi_x1:roi_x2]
+            results = model(roi_frame, verbose=False)
+            garment_valid = False
             
-            bx1, by1, bx2, by2 = map(int, best_box.xyxy[0].cpu().numpy())
-            box_area = (bx2 - bx1) * (by2 - by1)
-            
-            full_x1, full_y1 = roi_x1 + bx1, roi_y1 + by1
-            full_x2, full_y2 = roi_x1 + bx2, roi_y1 + by2
+            if len(results[0].boxes) > 0:
+                best_box = results[0].boxes[0]
+                conf = float(best_box.conf)
+                cls_id = int(best_box.cls)
+                detected_style = model.names[cls_id]
+                
+                bx1, by1, bx2, by2 = map(int, best_box.xyxy[0].cpu().numpy())
+                box_area = (bx2 - bx1) * (by2 - by1)
+                
+                # Bounding Box එකේ හරි මැද ලක්ෂ්‍යය (Center Point)
+                cx = (bx1 + bx2) // 2
+                cy = (by1 + by2) // 2
 
-            # තර්කය: Confidence එක 75% ට වැඩිද සහ ඇඳුම දිගෑරලා (ලොකුවට) තියෙනවද?
-            if conf >= MIN_CONFIDENCE and box_area >= MIN_GARMENT_AREA:
-                garment_valid = True
-                current_state = "VALID"
-                box_color = (0, 255, 0) # Green
+                # Motion Calculation (චලනය ගණනය කිරීම)
+                movement = 0
+                if last_center is not None:
+                    movement = np.sqrt((cx - last_center[0])**2 + (cy - last_center[1])**2)
+                last_center = (cx, cy)
+                
+                full_x1, full_y1 = roi_x1 + bx1, roi_y1 + by1
+                full_x2, full_y2 = roi_x1 + bx2, roi_y1 + by2
 
-                cv2.rectangle(display_frame, (full_x1, full_y1), (full_x2, full_y2), box_color, 2)
-                cv2.putText(display_frame, f"{detected_style.upper()} ({conf*100:.1f}%)", (full_x1, full_y1 - 5), font, 0.6, box_color, 2)
+                # නීතිය 1: Confidence සහ Size එක හරිද? (පොත්/ෆෝන්/ගුලි වූ ඇඳුම් ප්‍රතික්ෂේප කිරීම)
+                if conf >= MIN_CONFIDENCE and box_area >= MIN_GARMENT_AREA:
+                    
+                    # නීතිය 2: ඇඳුම මේසය මත නිශ්චලද? (Motion Tracking)
+                    if movement > MAX_MOVEMENT:
+                        current_state = "MOVING..."
+                        box_color = (0, 165, 255) # Orange Color
+                        stable_count = 0 # චලනය වන නිසා Tracking එක Reset වේ
+                        
+                        cv2.rectangle(display_frame, (full_x1, full_y1), (full_x2, full_y2), box_color, 2)
+                        cv2.putText(display_frame, "MOVING...", (full_x1, full_y1 - 5), font, 0.6, box_color, 2)
+                    
+                    else:
+                        # ඇඳුම නිවැරදියි සහ නිශ්චලයි (Ready to capture)
+                        garment_valid = True
+                        current_state = "VALID"
+                        box_color = (0, 255, 0) 
 
-                if detected_style == current_tracking_style:
-                    stable_count += 1
-                    # VALID වෙලාවේ තියෙන පැහැදිලිම (Best) Frame එක Save කරගැනීම
-                    if conf > best_conf_during_tracking:
-                        best_conf_during_tracking = conf
-                        best_frame_during_tracking = frame.copy()
-                        best_box_during_tracking = (full_x1, full_y1, full_x2, full_y2)
+                        cv2.rectangle(display_frame, (full_x1, full_y1), (full_x2, full_y2), box_color, 2)
+                        cv2.putText(display_frame, f"{detected_style.upper()} ({conf*100:.1f}%)", (full_x1, full_y1 - 5), font, 0.6, box_color, 2)
+
+                        if detected_style == current_tracking_style:
+                            stable_count += 1
+                            if conf > best_conf_during_tracking:
+                                best_conf_during_tracking = conf
+                                best_frame_during_tracking = frame.copy()
+                                best_box_during_tracking = (full_x1, full_y1, full_x2, full_y2)
+                        else:
+                            current_tracking_style = detected_style
+                            stable_count = 1
+                            best_conf_during_tracking = conf
+                            best_frame_during_tracking = frame.copy()
+                            best_box_during_tracking = (full_x1, full_y1, full_x2, full_y2)
+
+                        # Best Frame එක අල්ලා ගැනීම
+                        if stable_count >= STABILITY_FRAMES:
+                            fx1, fy1, fx2, fy2 = best_box_during_tracking
+                            garment_crop = best_frame_during_tracking[fy1:fy2, fx1:fx2]
+                            colors = extract_colors(garment_crop)
+                            
+                            _, buffer = cv2.imencode('.jpg', garment_crop)
+                            img_base64 = base64.b64encode(buffer).decode('utf-8')
+                            
+                            main_color = colors[0][0]
+                            formatted_colors = [f"{c[0]}: {c[1]:.1f}%" for c in colors]
+                            other_colors_str = " | ".join(formatted_colors[1:]) if len(colors) > 1 else "NONE"
+
+                            api_data = {
+                                "style_name": detected_style.upper(),
+                                "main_color": main_color,
+                                "other_colors": other_colors_str if other_colors_str != "NONE" else "",
+                                "confidence": round(best_conf_during_tracking * 100, 2),
+                                "image_base64": img_base64
+                            }
+                            
+                            try:
+                                requests.post("http://127.0.0.1:8000/api/garments/", json=api_data)
+                            except:
+                                pass
+
+                            cooldown_timer = COOLDOWN_FRAMES
+                            stable_count = 0
+                            current_tracking_style = ""
+                            last_center = None
+                
                 else:
-                    current_tracking_style = detected_style
-                    stable_count = 1
-                    best_conf_during_tracking = conf
-                    best_frame_during_tracking = frame.copy()
-                    best_box_during_tracking = (full_x1, full_y1, full_x2, full_y2)
-
-                if stable_count >= STABILITY_FRAMES:
-                    fx1, fy1, fx2, fy2 = best_box_during_tracking
-                    garment_crop = best_frame_during_tracking[fy1:fy2, fx1:fx2]
-                    colors = extract_colors(garment_crop)
-                    
-                    main_color = colors[0][0]
-                    formatted_colors = [f"{c[0]}: {c[1]:.1f}%" for c in colors]
-                    other_colors_str = " | ".join(formatted_colors[1:]) if len(colors) > 1 else "NONE"
-
-                    dash_img = cv2.resize(garment_crop, (200, 200))
-                    dash_style = detected_style.upper()
-                    dash_colors_text = formatted_colors
-
-                    api_data = {
-                        "style_name": dash_style,
-                        "main_color": main_color,
-                        "other_colors": other_colors_str if other_colors_str != "NONE" else "",
-                        "confidence": round(best_conf_during_tracking * 100, 2)
-                    }
-                    
-                    db_status = "⚠️ FAILED (Check Backend)"
-                    try:
-                        res = requests.post("http://127.0.0.1:8000/api/garments/", json=api_data)
-                        if res.status_code == 200:
-                            db_status = "✅ SAVED SUCCESS"
-                    except:
-                        pass
-
-                    # ==========================================
-                    # BEAUTIFUL TERMINAL OUTPUT
-                    # ==========================================
-                    print("\n" + "-" * 45)
-                    print(" 🎉 NEW GARMENT PACKED SUCCESSFULLY!")
-                    print("-" * 45)
-                    print(f" 👕 Style        : {dash_style} ({best_conf_during_tracking*100:.1f}%)")
-                    print(f" 🎨 Main Color   : {main_color}")
-                    print(f" 🌈 Other Colors : {other_colors_str}")
-                    print(f" 💾 Database     : {db_status}")
-                    print("-"*45 + "\n")
-
-                    cooldown_timer = COOLDOWN_FRAMES
+                    # Size එක මදි හෝ Confidence අඩුනම් (උදා: ෆෝන්, පොත්, ගුලි කරපු ඇඳුම්)
+                    current_state = "INVALID (ADJUST GARMENT)"
+                    box_color = (0, 0, 255) 
+                    cv2.rectangle(display_frame, (full_x1, full_y1), (full_x2, full_y2), box_color, 2)
+                    cv2.putText(display_frame, "INVALID", (full_x1, full_y1 - 5), font, 0.6, box_color, 2)
                     stable_count = 0
                     current_tracking_style = ""
-            
-            else:
-                # අතක් දැම්මොත් හෝ අකුලපු ඇඳුමක් තිබ්බොත් INVALID වේ
-                current_state = "INVALID (ADJUST GARMENT)"
-                box_color = (0, 0, 255) # Red
-                cv2.rectangle(display_frame, (full_x1, full_y1), (full_x2, full_y2), box_color, 2)
-                cv2.putText(display_frame, "INVALID", (full_x1, full_y1 - 5), font, 0.6, box_color, 2)
+                    last_center = None
+
+            if not garment_valid and current_state not in ["INVALID (ADJUST GARMENT)", "MOVING..."]:
+                current_state = "NOT READY"
+                box_color = (0, 255, 255)
                 stable_count = 0
                 current_tracking_style = ""
+                last_center = None
 
-        # ඇඳුමක් නැතිනම් NOT READY වේ
-        if not garment_valid and current_state != "INVALID (ADJUST GARMENT)":
-            current_state = "NOT READY"
-            box_color = (0, 255, 255)
-            stable_count = 0
-            current_tracking_style = ""
+        cv2.putText(display_frame, f"STATE: {current_state}", (20, 40), font, 0.8, box_color, 2, cv2.LINE_AA)
 
-    # Header State Text
-    cv2.putText(display_frame, f"STATE: {current_state}", (20, 40), font, 0.8, box_color, 2, cv2.LINE_AA)
+        with lock:
+            global_frame = display_frame.copy()
 
-    # ==========================================
-    # LIVE DASHBOARD (Side Panel)
-    # ==========================================
-    sidebar_width = 250
-    overlay = display_frame.copy()
-    cv2.rectangle(overlay, (frame_w - sidebar_width, 0), (frame_w, frame_h), (30, 30, 30), -1)
-    display_frame = cv2.addWeighted(overlay, 0.8, display_frame, 0.2, 0)
-    
-    cv2.putText(display_frame, "LAST SCANNED:", (frame_w - sidebar_width + 10, 30), font, 0.6, (200, 200, 200), 1)
+        cv2.waitKey(1)
 
-    if dash_img is not None:
-        img_x, img_y = frame_w - sidebar_width + 25, 50
-        display_frame[img_y:img_y+200, img_x:img_x+200] = dash_img
-        cv2.rectangle(display_frame, (img_x, img_y), (img_x+200, img_y+200), (0, 255, 0), 2)
-        
-        text_y = img_y + 230
-        cv2.putText(display_frame, f"STYLE: {dash_style}", (img_x, text_y), font, 0.6, (0, 255, 0), 2)
-        
-        text_y += 30
-        for color_txt in dash_colors_text:
-            cv2.putText(display_frame, color_txt, (img_x, text_y), font, 0.5, (255, 255, 255), 1)
-            text_y += 25
+    cap.release()
 
-    cv2.imshow("PACKING STATION AI", display_frame)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == '__main__':
+    t = threading.Thread(target=run_opencv_pipeline)
+    t.daemon = True
+    t.start()
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
