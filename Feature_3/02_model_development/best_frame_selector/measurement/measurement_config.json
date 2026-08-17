@@ -1,0 +1,11 @@
+{
+  "camera_model": "Logitech C922 Pro HD Stream Webcam",
+  "camera_height_cm": 120.0,
+  "image_width_px": 1920,
+  "image_height_px": 1080,
+  "diagonal_fov_deg": 78.0,
+  "horizontal_fov_deg": 70.43,
+  "vertical_fov_deg": 43.31,
+  "fps": 30,
+  "digital_zoom": false
+}

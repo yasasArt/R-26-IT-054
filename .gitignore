@@ -11,3 +11,13 @@ Feature_2/01-data-annotation-and-dataset-preparation/generated_clips/test
 ##
 Feature_3/01_video_annotation/extracted_frames
 Feature_3/01_video_annotation/shuffled videos
+
+Feature_3/02_model_development/best_frame_dataset/test
+Feature_3/02_model_development/best_frame_dataset/train
+Feature_3/02_model_development/best_frame_dataset/val
+Feature_3/02_model_development/best_frame_selector/adaptation_v2/extracted_frames
+Feature_3/02_model_development/best_frame_selector/data/measurement_dataset/sample_best_frames
+Feature_3/02_model_development/best_frame_selector/outputs/old_video_test/selected_frames
+Feature_3/02_model_development/best_frame_selector/outputs/sample_run/selected_frames
+Feature_3/02_model_development/best_frame_selector/sample_videos
+

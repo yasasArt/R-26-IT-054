@@ -1,0 +1,23 @@
+{
+  "session_started_utc": "2026-08-08T12:58:43.476624+00:00",
+  "session_ended_utc": "2026-08-08T13:01:47.764796+00:00",
+  "session_duration_seconds": 184.281,
+  "model": "C:\\Users\\wgucg\\Desktop\\videos\\videos\\02_model_development\\best_frame_selector\\models\\best_model.pt",
+  "device": "cuda",
+  "strategy": "visual_only",
+  "ready_threshold": 0.74,
+  "sample_fps": 3.0,
+  "end_gap_frames": 5,
+  "min_ready_frames": 1,
+  "camera_index": 0,
+  "camera_backend": "auto",
+  "camera_width": 1280,
+  "camera_height": 720,
+  "reported_camera_fps": 30.0,
+  "mirror": false,
+  "camera_frames_read": 5383,
+  "sampled_frames": 540,
+  "events_saved": 0,
+  "stopped_reason": "user_pressed_q",
+  "test_split_used": false
+}

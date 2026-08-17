@@ -1,0 +1,21 @@
+{
+  "video": "C:\\Users\\wgucg\\Desktop\\videos\\videos\\02_model_development\\best_frame_selector\\sample_videos\\v25.mp4",
+  "model": "C:\\Users\\wgucg\\Desktop\\videos\\videos\\02_model_development\\best_frame_selector\\models\\best_model.pt",
+  "device": "cuda",
+  "strategy": "visual_only",
+  "ready_threshold": 0.74,
+  "source_fps": 30.0,
+  "source_width": 480,
+  "source_height": 586,
+  "requested_sample_fps": 3.0,
+  "effective_sample_fps": 3.0,
+  "end_gap_frames": 5,
+  "min_ready_frames": 1,
+  "sampled_frames": 1437,
+  "events_saved": 25,
+  "saved_image_format": "png",
+  "preview_width": 1280,
+  "preview_height": 720,
+  "stopped_by_user": false,
+  "test_split_used": false
+}

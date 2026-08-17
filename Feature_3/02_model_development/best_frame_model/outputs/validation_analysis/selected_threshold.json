@@ -1,0 +1,54 @@
+{
+  "checkpoint": "C:\\Users\\wgucg\\Desktop\\videos\\videos\\02_model_development\\best_frame_model\\outputs\\baseline_mobilenetv3_gpu\\best_model.pt",
+  "checkpoint_best_epoch": 14,
+  "checkpoint_best_validation_macro_f1": 0.8604199905707359,
+  "device": "cuda",
+  "validation_images": 3244,
+  "class_to_idx": {
+    "INVALID": 0,
+    "NOT_READY": 1,
+    "READY": 2
+  },
+  "test_split_used": false,
+  "selection_rule": "Accept READY when p_ready >= threshold; otherwise choose max(INVALID, NOT_READY).",
+  "target_ready_precision": 0.9,
+  "minimum_ready_recall": 0.7,
+  "selected_threshold": 0.74,
+  "gate_pass": true,
+  "selection_reason": "precision_and_recall_gate_met",
+  "selected_threshold_metrics": {
+    "threshold": 0.74,
+    "ready_precision": 0.9018518518518519,
+    "ready_recall": 0.8513986013986014,
+    "ready_f1": 0.8758992805755396,
+    "specificity": 0.9801646706586826,
+    "false_positive_rate": 0.019835329341317376,
+    "true_positive": 487,
+    "false_positive": 53,
+    "false_negative": 85,
+    "true_negative": 2619,
+    "accepted_ready_frames": 540
+  },
+  "ready_average_precision": 0.8893632368214144,
+  "argmax_ready_metrics": {
+    "precision": 0.8611111111111112,
+    "recall": 0.8671328671328671,
+    "f1-score": 0.8641114982578397,
+    "support": 572.0
+  },
+  "thresholded_ready_metrics": {
+    "precision": 0.9018518518518519,
+    "recall": 0.8513986013986014,
+    "f1-score": 0.8758992805755396,
+    "support": 572.0
+  },
+  "argmax_macro_f1": 0.9158754269779833,
+  "thresholded_macro_f1": 0.9215485612546832,
+  "error_counts_at_selected_threshold": {
+    "CORRECT": 3024,
+    "NON_READY_CONFUSION": 82,
+    "FALSE_READY": 53,
+    "MISSED_READY": 85
+  },
+  "next_action": "Proceed to Phase 4 temporal selector tuning on validation videos."
+}
