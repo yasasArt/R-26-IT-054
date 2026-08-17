@@ -24,3 +24,5 @@ Feature_3/02_model_development/best_frame_selector/sample_videos
 Feature_3/06_garment_measurement/data/annotation_pilot/images
 Feature_3/06_garment_measurement/data/raw_best_frames
 
+Feature_3/garment_piece_detector/dataset
+
