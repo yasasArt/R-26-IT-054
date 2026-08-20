@@ -1,0 +1,26 @@
+{
+  "tshirt": [
+    {
+      "size": "S",
+      "width_cm": 49.53,
+      "height_cm": 68.58
+    },
+    {
+      "size": "M",
+      "width_cm": 52.07,
+      "height_cm": 69.85
+    },
+    {
+      "size": "L",
+      "width_cm": 54.61,
+      "height_cm": 71.12
+    },
+    {
+      "size": "XL",
+      "width_cm": 58.42,
+      "height_cm": 72.39
+    }
+  ],
+  "shirt": [],
+  "trouser": []
+}
