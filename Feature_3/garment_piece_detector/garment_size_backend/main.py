@@ -44,9 +44,9 @@ SIZE_CHART_PATH = (
 MARKER_SIZE_CM = 10.0
 MARKER_ID = 0
 
-MINIMUM_CONFIDENCE = 0.70
+MINIMUM_CONFIDENCE = 0.50
 MINIMUM_MASK_AREA_RATIO = 0.04
-MAXIMUM_MASK_AREA_RATIO = 0.90
+MAXIMUM_MASK_AREA_RATIO = 0.65
 
 ROI_MARGIN_X = 0.04
 ROI_MARGIN_Y = 0.04
@@ -362,16 +362,16 @@ def detect_pixels_per_cm(
     )
 
 
-# ==================================================
-# Mask processing
-# ==================================================
-
-def create_combined_mask(
+def select_best_garment_mask(
     result,
     image_shape,
 ):
     image_height, image_width = (
         image_shape[:2]
+    )
+
+    image_area = float(
+        image_height * image_width
     )
 
     if (
@@ -391,100 +391,307 @@ def create_combined_mask(
         result.boxes.conf
         .detach()
         .cpu()
+        .numpy()
     )
 
-    valid_indices = torch.where(
-        confidences
-        >= MINIMUM_CONFIDENCE
-    )[0]
-
-    if len(valid_indices) == 0:
-        return (
-            "LOW_CONFIDENCE",
-            (
-                "Garment confidence is too low. "
-                "Adjust the garment and lighting."
-            ),
-            None,
-            None,
-        )
-
-    selected_masks = (
-        result.masks.data[
-            valid_indices
-        ]
-    )
-
-    combined_tensor = torch.any(
-        selected_masks > 0.5,
-        dim=0,
-    )
-
-    combined_mask = (
-        combined_tensor
+    mask_data = (
+        result.masks.data
+        .detach()
         .cpu()
         .numpy()
-        .astype(np.uint8)
-        * 255
     )
 
-    if combined_mask.shape != (
-        image_height,
-        image_width,
+    number_of_masks = min(
+        len(confidences),
+        len(mask_data),
+    )
+
+    candidates = []
+
+    boundary_rejections = 0
+    area_rejections = 0
+
+    image_centre_x = (
+        image_width / 2.0
+    )
+
+    image_centre_y = (
+        image_height / 2.0
+    )
+
+    maximum_centre_distance = math.sqrt(
+        image_centre_x ** 2
+        + image_centre_y ** 2
+    )
+
+    for index in range(
+        number_of_masks
     ):
-        combined_mask = cv2.resize(
-            combined_mask,
-            (
-                image_width,
-                image_height,
-            ),
-            interpolation=cv2.INTER_NEAREST,
+        confidence = float(
+            confidences[index]
         )
 
-    kernel = np.ones(
-        (7, 7),
-        dtype=np.uint8,
-    )
+        if (
+            confidence
+            < MINIMUM_CONFIDENCE
+        ):
+            continue
 
-    combined_mask = cv2.morphologyEx(
-        combined_mask,
-        cv2.MORPH_CLOSE,
-        kernel,
-        iterations=2,
-    )
+        current_mask = (
+            mask_data[index] > 0.5
+        ).astype(np.uint8) * 255
 
-    component_count, labels, stats, _ = (
-        cv2.connectedComponentsWithStats(
-            combined_mask,
+        if current_mask.shape != (
+            image_height,
+            image_width,
+        ):
+            current_mask = cv2.resize(
+                current_mask,
+                (
+                    image_width,
+                    image_height,
+                ),
+                interpolation=(
+                    cv2.INTER_NEAREST
+                ),
+            )
+
+        # Remove isolated segmentation noise
+        open_kernel = np.ones(
+            (5, 5),
+            dtype=np.uint8,
+        )
+
+        current_mask = (
+            cv2.morphologyEx(
+                current_mask,
+                cv2.MORPH_OPEN,
+                open_kernel,
+                iterations=1,
+            )
+        )
+
+        # Close small holes inside garment
+        close_kernel = np.ones(
+            (7, 7),
+            dtype=np.uint8,
+        )
+
+        current_mask = (
+            cv2.morphologyEx(
+                current_mask,
+                cv2.MORPH_CLOSE,
+                close_kernel,
+                iterations=2,
+            )
+        )
+
+        (
+            component_count,
+            component_labels,
+            component_stats,
+            _,
+        ) = cv2.connectedComponentsWithStats(
+            current_mask,
             connectivity=8,
         )
-    )
 
-    image_area = float(
-        image_height * image_width
-    )
+        if component_count <= 1:
+            continue
 
-    components = []
-
-    for label in range(
-        1,
-        component_count,
-    ):
-        area = int(
-            stats[
-                label,
+        component_areas = (
+            component_stats[
+                1:,
                 cv2.CC_STAT_AREA,
             ]
         )
 
-        if area >= (
-            image_area * 0.003
+        largest_component_index = (
+            int(
+                np.argmax(
+                    component_areas
+                )
+            )
+            + 1
+        )
+
+        clean_mask = (
+            component_labels
+            == largest_component_index
+        ).astype(np.uint8) * 255
+
+        mask_area = float(
+            np.count_nonzero(
+                clean_mask
+            )
+        )
+
+        area_ratio = (
+            mask_area / image_area
+        )
+
+        if (
+            area_ratio
+            < MINIMUM_MASK_AREA_RATIO
+            or area_ratio
+            > MAXIMUM_MASK_AREA_RATIO
         ):
-            components.append(
-                (label, area)
+            area_rejections += 1
+            continue
+
+        nonzero_points = (
+            cv2.findNonZero(
+                clean_mask
+            )
+        )
+
+        if nonzero_points is None:
+            continue
+
+        x, y, width, height = (
+            cv2.boundingRect(
+                nonzero_points
+            )
+        )
+
+        # Ignore masks that meaningfully
+        # extend into detection-zone edges
+        border_size = max(
+            8,
+            int(
+                min(
+                    image_height,
+                    image_width,
+                ) * 0.01
+            ),
+        )
+
+        edge_pixel_counts = [
+            int(
+                np.count_nonzero(
+                    clean_mask[
+                        :border_size,
+                        :
+                    ]
+                )
+            ),
+            int(
+                np.count_nonzero(
+                    clean_mask[
+                        -border_size:,
+                        :
+                    ]
+                )
+            ),
+            int(
+                np.count_nonzero(
+                    clean_mask[
+                        :,
+                        :border_size
+                    ]
+                )
+            ),
+            int(
+                np.count_nonzero(
+                    clean_mask[
+                        :,
+                        -border_size:
+                    ]
+                )
+            ),
+        ]
+
+        maximum_edge_ratio = max(
+            edge_pixel_counts
+        ) / max(
+            mask_area,
+            1.0,
+        )
+
+        if maximum_edge_ratio > 0.015:
+            boundary_rejections += 1
+            continue
+
+        mask_centre_x = (
+            x + width / 2.0
+        )
+
+        mask_centre_y = (
+            y + height / 2.0
+        )
+
+        centre_distance = math.sqrt(
+            (
+                mask_centre_x
+                - image_centre_x
+            ) ** 2
+            + (
+                mask_centre_y
+                - image_centre_y
+            ) ** 2
+        )
+
+        normalised_centre_distance = min(
+            centre_distance
+            / maximum_centre_distance,
+            1.0,
+        )
+
+        centre_score = (
+            1.0
+            - normalised_centre_distance
+        )
+
+        # Garments generally occupy a useful
+        # but not excessive part of the zone
+        area_score = min(
+            area_ratio / 0.25,
+            1.0,
+        )
+
+        final_score = (
+            confidence * 0.70
+            + centre_score * 0.20
+            + area_score * 0.10
+        )
+
+        candidates.append({
+            "mask": clean_mask,
+            "confidence": confidence,
+            "area": mask_area,
+            "area_ratio": area_ratio,
+            "score": final_score,
+            "box": (
+                x,
+                y,
+                width,
+                height,
+            ),
+        })
+
+    if not candidates:
+        if boundary_rejections > 0:
+            return (
+                "PARTIAL_GARMENT",
+                (
+                    "Garment is not fully inside "
+                    "the detection zone."
+                ),
+                None,
+                None,
             )
 
-    if not components:
+        if area_rejections > 0:
+            return (
+                "INVALID_GARMENT_AREA",
+                (
+                    "Detected region is too small "
+                    "or too large to be a garment."
+                ),
+                None,
+                None,
+            )
+
         return (
             "NO_GARMENT",
             "No garment detected.",
@@ -492,122 +699,64 @@ def create_combined_mask(
             None,
         )
 
-    components.sort(
-        key=lambda item: item[1],
+    candidates.sort(
+        key=lambda candidate:
+            candidate["score"],
         reverse=True,
     )
 
-    if (
-        len(components) > 1
-        and components[1][1]
-        >= components[0][1] * 0.25
-    ):
-        return (
-            "MULTIPLE_GARMENTS",
-            (
-                "Multiple garments detected. "
-                "Keep only one garment inside "
-                "the detection zone."
-            ),
-            None,
-            None,
+    best_candidate = candidates[0]
+
+    # If another similarly large mask exists,
+    # there may be multiple garments
+    if len(candidates) > 1:
+        second_candidate = (
+            candidates[1]
         )
 
-    largest_label = components[0][0]
-
-    final_mask = (
-        labels == largest_label
-    ).astype(np.uint8) * 255
-
-    mask_area = float(
-        np.count_nonzero(final_mask)
-    )
-
-    area_ratio = (
-        mask_area / image_area
-    )
-
-    if (
-        area_ratio
-        < MINIMUM_MASK_AREA_RATIO
-    ):
-        return (
-            "NO_GARMENT",
-            (
-                "No valid garment detected. "
-                "Move the garment into the zone."
-            ),
-            None,
-            None,
+        second_is_significant = (
+            second_candidate["area"]
+            >= best_candidate["area"]
+            * 0.45
         )
 
-    if (
-        area_ratio
-        > MAXIMUM_MASK_AREA_RATIO
-    ):
-        return (
-            "PARTIAL_GARMENT",
-            (
-                "Garment is too close or fills "
-                "the complete camera view."
-            ),
-            None,
-            None,
+        second_has_similar_score = (
+            second_candidate["score"]
+            >= best_candidate["score"]
+            * 0.75
         )
 
-    border_size = 6
+        if (
+            second_is_significant
+            and second_has_similar_score
+        ):
+            return (
+                "MULTIPLE_GARMENTS",
+                (
+                    "Multiple garments detected. "
+                    "Keep only one garment inside "
+                    "the detection zone."
+                ),
+                None,
+                None,
+            )
 
-    touches_boundary = any([
-        np.any(
-            final_mask[
-                :border_size,
-                :
-            ]
-        ),
-        np.any(
-            final_mask[
-                -border_size:,
-                :
-            ]
-        ),
-        np.any(
-            final_mask[
-                :,
-                :border_size
-            ]
-        ),
-        np.any(
-            final_mask[
-                :,
-                -border_size:
-            ]
-        ),
-    ])
-
-    if touches_boundary:
-        return (
-            "PARTIAL_GARMENT",
-            (
-                "Garment is not fully inside "
-                "the detection zone."
-            ),
-            None,
-            None,
-        )
-
-    best_confidence = float(
-        confidences[
-            valid_indices
-        ].max().item()
+    print(
+        "Selected garment mask | "
+        f"confidence="
+        f"{best_candidate['confidence']:.3f} | "
+        f"area_ratio="
+        f"{best_candidate['area_ratio']:.3f} | "
+        f"score="
+        f"{best_candidate['score']:.3f}"
     )
 
     return (
         "VALID",
-        "Garment mask is valid.",
-        final_mask,
-        best_confidence,
+        "Best garment mask selected.",
+        best_candidate["mask"],
+        best_candidate["confidence"],
     )
-
 
 # ==================================================
 # Rotate garment upright
@@ -1315,8 +1464,8 @@ async def measure_garment(
 
     predictions = model.predict(
         source=detection_zone,
-        imgsz=640,
-        conf=0.50,
+        imgsz=960,
+        conf=0.25,
         device=DEVICE,
         retina_masks=True,
         verbose=False,
@@ -1340,11 +1489,12 @@ async def measure_garment(
         mask_message,
         garment_mask,
         confidence,
-    ) = create_combined_mask(
+
+            ) = select_best_garment_mask(
         result,
         detection_zone.shape,
     )
-
+    
     if garment_mask is None:
         return make_response(
             state=mask_state,
