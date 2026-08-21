@@ -1,7 +1,10 @@
 import base64
 import json
 import math
+from collections import deque
+from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
 
 import cv2
 import numpy as np
@@ -44,9 +47,30 @@ SIZE_CHART_PATH = (
 MARKER_SIZE_CM = 10.0
 MARKER_ID = 0
 
-MINIMUM_CONFIDENCE = 0.50
-MINIMUM_MASK_AREA_RATIO = 0.04
-MAXIMUM_MASK_AREA_RATIO = 0.65
+# A low inference threshold helps dark garments reach the validation stage.
+# A result is never counted from confidence alone; geometry and temporal
+# consistency are checked below.
+INFERENCE_CONFIDENCE = 0.15
+MINIMUM_CONFIDENCE = 0.30
+MINIMUM_MASK_AREA_RATIO = 0.025
+MAXIMUM_MASK_AREA_RATIO = 0.55
+
+INFERENCE_IMAGE_SIZE = 768
+
+# Automatic garment lifecycle settings. At an approximately 450 ms frontend
+# scan interval, three stable frames take about 1.35 seconds. Four empty frames
+# are required before the same station is armed for the next garment.
+STABLE_FRAMES_REQUIRED = 3
+EMPTY_FRAMES_TO_REARM = 4
+MAX_STABLE_WIDTH_CHANGE_CM = 2.0
+MAX_STABLE_LENGTH_CHANGE_CM = 2.5
+
+# These margins are used only to reject obviously incomplete T-shirt masks.
+# The actual size label is still obtained from size_chart.json.
+TSHIRT_EXTRA_WIDTH_MARGIN_CM = 10.0
+TSHIRT_EXTRA_LENGTH_MARGIN_CM = 15.0
+TSHIRT_MIN_WIDTH_LENGTH_RATIO = 0.48
+TSHIRT_MAX_WIDTH_LENGTH_RATIO = 1.10
 
 ROI_MARGIN_X = 0.04
 ROI_MARGIN_Y = 0.04
@@ -83,6 +107,269 @@ def load_size_chart() -> dict:
 
 
 SIZE_CHART = load_size_chart()
+
+
+# ==================================================
+# Automatic counting and lifecycle state
+# ==================================================
+
+COUNTED_SIZES = (
+    "XS",
+    "S",
+    "M",
+    "L",
+    "XL",
+    "XXL",
+    "UNKNOWN",
+)
+
+
+def empty_count_table() -> dict:
+    return {
+        garment_type: {
+            size: 0
+            for size in COUNTED_SIZES
+        }
+        for garment_type in sorted(
+            ALLOWED_GARMENT_TYPES
+        )
+    }
+
+
+TRACKER_LOCK = Lock()
+
+TRACKER = {
+    "tracking_state": "EMPTY",
+    "stable_samples": deque(
+        maxlen=STABLE_FRAMES_REQUIRED
+    ),
+    "empty_frames": 0,
+    "current_garment_counted": False,
+    "counts": empty_count_table(),
+    "history": deque(maxlen=50),
+}
+
+
+def tracker_snapshot(
+    *,
+    counted_now: bool = False,
+) -> dict:
+    counts = {
+        garment: dict(size_counts)
+        for garment, size_counts
+        in TRACKER["counts"].items()
+    }
+
+    total_count = sum(
+        count
+        for size_counts in counts.values()
+        for count in size_counts.values()
+    )
+
+    return {
+        "tracking_state": (
+            TRACKER["tracking_state"]
+        ),
+        "stable_count": len(
+            TRACKER["stable_samples"]
+        ),
+        "stable_required": (
+            STABLE_FRAMES_REQUIRED
+        ),
+        "counted_now": counted_now,
+        "ready_for_next_garment": not (
+            TRACKER[
+                "current_garment_counted"
+            ]
+        ),
+        "counts": counts,
+        "total_count": total_count,
+        "recent_history": list(
+            TRACKER["history"]
+        )[:10],
+    }
+
+
+def update_tracker_non_ready(
+    state: str,
+) -> dict:
+    """Update lifecycle for an invalid or empty camera frame."""
+    with TRACKER_LOCK:
+        TRACKER["stable_samples"].clear()
+
+        if state == "NO_GARMENT":
+            TRACKER["empty_frames"] += 1
+
+            if (
+                TRACKER["empty_frames"]
+                >= EMPTY_FRAMES_TO_REARM
+            ):
+                TRACKER[
+                    "current_garment_counted"
+                ] = False
+                TRACKER[
+                    "tracking_state"
+                ] = "EMPTY"
+            elif TRACKER[
+                "current_garment_counted"
+            ]:
+                TRACKER[
+                    "tracking_state"
+                ] = "WAIT_REMOVAL"
+            else:
+                TRACKER[
+                    "tracking_state"
+                ] = "EMPTY"
+        else:
+            # Marker/partial/low-confidence frames do not prove that the
+            # previous garment was removed, so they never re-arm counting.
+            TRACKER["empty_frames"] = 0
+
+            if TRACKER[
+                "current_garment_counted"
+            ]:
+                TRACKER[
+                    "tracking_state"
+                ] = "WAIT_REMOVAL"
+            else:
+                TRACKER[
+                    "tracking_state"
+                ] = state
+
+        return tracker_snapshot()
+
+
+def stable_samples_are_consistent(
+    previous: dict,
+    current: dict,
+) -> bool:
+    return (
+        previous["garment_type"]
+        == current["garment_type"]
+        and previous["size"]
+        == current["size"]
+        and abs(
+            previous["width_cm"]
+            - current["width_cm"]
+        ) <= MAX_STABLE_WIDTH_CHANGE_CM
+        and abs(
+            previous["length_cm"]
+            - current["length_cm"]
+        ) <= MAX_STABLE_LENGTH_CHANGE_CM
+    )
+
+
+def update_tracker_ready(
+    *,
+    garment_type: str,
+    size: str,
+    width_cm: float,
+    length_cm: float,
+    confidence: float,
+) -> dict:
+    """Count one garment only after consistent frames and one removal."""
+    current_sample = {
+        "garment_type": garment_type,
+        "size": size,
+        "width_cm": float(width_cm),
+        "length_cm": float(length_cm),
+        "confidence": float(confidence),
+    }
+
+    with TRACKER_LOCK:
+        TRACKER["empty_frames"] = 0
+
+        if TRACKER[
+            "current_garment_counted"
+        ]:
+            TRACKER[
+                "tracking_state"
+            ] = "WAIT_REMOVAL"
+            return tracker_snapshot()
+
+        samples = TRACKER[
+            "stable_samples"
+        ]
+
+        if (
+            samples
+            and not stable_samples_are_consistent(
+                samples[-1],
+                current_sample,
+            )
+        ):
+            samples.clear()
+
+        samples.append(current_sample)
+        TRACKER[
+            "tracking_state"
+        ] = "STABILIZING"
+
+        if len(samples) < STABLE_FRAMES_REQUIRED:
+            return tracker_snapshot()
+
+        widths = [
+            sample["width_cm"]
+            for sample in samples
+        ]
+        lengths = [
+            sample["length_cm"]
+            for sample in samples
+        ]
+        confidences = [
+            sample["confidence"]
+            for sample in samples
+        ]
+
+        final_width = float(np.median(widths))
+        final_length = float(np.median(lengths))
+        final_confidence = float(
+            np.median(confidences)
+        )
+
+        count_size = (
+            size
+            if size in COUNTED_SIZES
+            else "UNKNOWN"
+        )
+
+        TRACKER["counts"][garment_type][
+            count_size
+        ] += 1
+
+        record = {
+            "id": datetime.now(
+                timezone.utc
+            ).isoformat(),
+            "garment_type": garment_type,
+            "size": count_size,
+            "width_cm": round(
+                final_width,
+                2,
+            ),
+            "length_cm": round(
+                final_length,
+                2,
+            ),
+            "confidence": round(
+                final_confidence,
+                4,
+            ),
+        }
+
+        TRACKER["history"].appendleft(
+            record
+        )
+        TRACKER[
+            "current_garment_counted"
+        ] = True
+        TRACKER[
+            "tracking_state"
+        ] = "COUNTED"
+
+        return tracker_snapshot(
+            counted_now=True
+        )
 
 
 # ==================================================
@@ -164,6 +451,29 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+def warm_up_model():
+    """Remove the long delay from the first real camera request."""
+    dummy_image = np.zeros(
+        (640, 640, 3),
+        dtype=np.uint8,
+    )
+
+    try:
+        model.predict(
+            source=dummy_image,
+            imgsz=640,
+            conf=INFERENCE_CONFIDENCE,
+            device=DEVICE,
+            half=torch.cuda.is_available(),
+            verbose=False,
+        )
+        print("YOLO model warm-up completed.")
+    except Exception as error:
+        # The API can still start and report the actual inference error later.
+        print(f"YOLO warm-up warning: {error}")
+
+
 # ==================================================
 # Utility functions
 # ==================================================
@@ -204,6 +514,8 @@ def make_response(
     size=None,
     pixels_per_cm=None,
     annotated_image=None,
+    size_distance_cm=None,
+    **tracking_data,
 ) -> dict:
     return {
         "state": state,
@@ -218,6 +530,8 @@ def make_response(
         "size": size,
         "pixels_per_cm": pixels_per_cm,
         "annotated_image": annotated_image,
+        "size_distance_cm": size_distance_cm,
+        **tracking_data,
     }
 
 
@@ -410,6 +724,7 @@ def select_best_garment_mask(
 
     boundary_rejections = 0
     area_rejections = 0
+    confidence_rejections = 0
 
     image_centre_x = (
         image_width / 2.0
@@ -435,6 +750,7 @@ def select_best_garment_mask(
             confidence
             < MINIMUM_CONFIDENCE
         ):
+            confidence_rejections += 1
             continue
 
         current_mask = (
@@ -670,6 +986,17 @@ def select_best_garment_mask(
         })
 
     if not candidates:
+        if confidence_rejections > 0:
+            return (
+                "LOW_CONFIDENCE",
+                (
+                    "A possible garment was found, "
+                    "but confidence is too low."
+                ),
+                None,
+                None,
+            )
+
         if boundary_rejections > 0:
             return (
                 "PARTIAL_GARMENT",
@@ -1160,6 +1487,104 @@ def calculate_straight_measurements(
 
 
 # ==================================================
+# Full-garment geometry validation
+# ==================================================
+
+def validate_physical_measurement(
+    garment_type: str,
+    width_cm: float,
+    length_cm: float,
+) -> tuple[bool, str]:
+    """
+    Reject masks that contain only a narrow garment fragment or an
+    implausibly large background region. Bounds are derived from the local
+    size chart instead of inventing a second independent size chart.
+    """
+    if (
+        not np.isfinite(width_cm)
+        or not np.isfinite(length_cm)
+        or width_cm <= 0
+        or length_cm <= 0
+    ):
+        return (
+            False,
+            "Garment dimensions could not be calculated.",
+        )
+
+    references = SIZE_CHART.get(
+        garment_type,
+        [],
+    )
+
+    # A category without approved local references can still be measured,
+    # but it cannot be assigned a reliable size label yet.
+    if not references:
+        return True, "Physical dimensions calculated."
+
+    reference_widths = [
+        float(reference["width_cm"])
+        for reference in references
+    ]
+    reference_lengths = [
+        float(reference["height_cm"])
+        for reference in references
+    ]
+
+    minimum_width = (
+        min(reference_widths)
+        - TSHIRT_EXTRA_WIDTH_MARGIN_CM
+    )
+    maximum_width = (
+        max(reference_widths)
+        + TSHIRT_EXTRA_WIDTH_MARGIN_CM
+    )
+    minimum_length = (
+        min(reference_lengths)
+        - TSHIRT_EXTRA_LENGTH_MARGIN_CM
+    )
+    maximum_length = (
+        max(reference_lengths)
+        + TSHIRT_EXTRA_LENGTH_MARGIN_CM
+    )
+
+    width_length_ratio = (
+        width_cm / length_cm
+    )
+
+    if not (
+        minimum_width
+        <= width_cm
+        <= maximum_width
+    ):
+        return (
+            False,
+            "Only part of the garment was segmented: invalid width.",
+        )
+
+    if not (
+        minimum_length
+        <= length_cm
+        <= maximum_length
+    ):
+        return (
+            False,
+            "Only part of the garment was segmented: invalid length.",
+        )
+
+    if garment_type in {"tshirt", "shirt"} and not (
+        TSHIRT_MIN_WIDTH_LENGTH_RATIO
+        <= width_length_ratio
+        <= TSHIRT_MAX_WIDTH_LENGTH_RATIO
+    ):
+        return (
+            False,
+            "Only part of the garment was segmented: invalid silhouette ratio.",
+        )
+
+    return True, "Complete garment geometry accepted."
+
+
+# ==================================================
 # Size classification
 # ==================================================
 
@@ -1387,7 +1812,29 @@ def health():
         "model_path": str(MODEL_PATH),
         "device": DEVICE_NAME,
         "marker_size_cm": MARKER_SIZE_CM,
+        "inference_image_size": INFERENCE_IMAGE_SIZE,
+        "stable_frames_required": STABLE_FRAMES_REQUIRED,
     }
+
+
+@app.get("/counts")
+def get_counts():
+    """Return size-wise totals and the most recent counted garments."""
+    with TRACKER_LOCK:
+        return tracker_snapshot()
+
+
+@app.post("/counts/reset")
+def reset_counts():
+    """Start a new counting session without restarting the API."""
+    with TRACKER_LOCK:
+        TRACKER["tracking_state"] = "EMPTY"
+        TRACKER["stable_samples"].clear()
+        TRACKER["empty_frames"] = 0
+        TRACKER["current_garment_counted"] = False
+        TRACKER["counts"] = empty_count_table()
+        TRACKER["history"].clear()
+        return tracker_snapshot()
 
 
 @app.post("/measure")
@@ -1453,6 +1900,9 @@ async def measure_garment(
     )
 
     if pixels_per_cm is None:
+        tracking_data = update_tracker_non_ready(
+            "MARKER_MISSING"
+        )
         return make_response(
             state="MARKER_MISSING",
             message=(
@@ -1460,18 +1910,23 @@ async def measure_garment(
                 "Keep the complete marker visible."
             ),
             garment_type=garment_type,
+            **tracking_data,
         )
 
     predictions = model.predict(
         source=detection_zone,
-        imgsz=960,
-        conf=0.25,
+        imgsz=INFERENCE_IMAGE_SIZE,
+        conf=INFERENCE_CONFIDENCE,
         device=DEVICE,
+        half=torch.cuda.is_available(),
         retina_masks=True,
         verbose=False,
     )
 
     if not predictions:
+        tracking_data = update_tracker_non_ready(
+            "NO_GARMENT"
+        )
         return make_response(
             state="NO_GARMENT",
             message="No garment detected.",
@@ -1480,6 +1935,7 @@ async def measure_garment(
                 pixels_per_cm,
                 4,
             ),
+            **tracking_data,
         )
 
     result = predictions[0]
@@ -1489,13 +1945,15 @@ async def measure_garment(
         mask_message,
         garment_mask,
         confidence,
-
-            ) = select_best_garment_mask(
+    ) = select_best_garment_mask(
         result,
         detection_zone.shape,
     )
     
     if garment_mask is None:
+        tracking_data = update_tracker_non_ready(
+            mask_state
+        )
         return make_response(
             state=mask_state,
             message=mask_message,
@@ -1504,6 +1962,7 @@ async def measure_garment(
                 pixels_per_cm,
                 4,
             ),
+            **tracking_data,
         )
 
     (
@@ -1524,6 +1983,9 @@ async def measure_garment(
             garment_type,
         )
     except ValueError as error:
+        tracking_data = update_tracker_non_ready(
+            "MEASUREMENT_FAILED"
+        )
         return make_response(
             state="MEASUREMENT_FAILED",
             message=str(error),
@@ -1532,6 +1994,7 @@ async def measure_garment(
                 pixels_per_cm,
                 4,
             ),
+            **tracking_data,
         )
 
     width_cm = (
@@ -1544,10 +2007,44 @@ async def measure_garment(
         / pixels_per_cm
     )
 
+    (
+        physical_measurement_valid,
+        physical_validation_message,
+    ) = validate_physical_measurement(
+        garment_type,
+        width_cm,
+        height_cm,
+    )
+
+    if not physical_measurement_valid:
+        tracking_data = update_tracker_non_ready(
+            "PARTIAL_GARMENT"
+        )
+        return make_response(
+            state="PARTIAL_GARMENT",
+            message=physical_validation_message,
+            garment_type=garment_type,
+            detected=False,
+            confidence=round(confidence, 4),
+            pixels_per_cm=round(
+                pixels_per_cm,
+                4,
+            ),
+            **tracking_data,
+        )
+
     size, size_distance = classify_size(
         garment_type,
         width_cm,
         height_cm,
+    )
+
+    tracking_data = update_tracker_ready(
+        garment_type=garment_type,
+        size=size,
+        width_cm=width_cm,
+        length_cm=height_cm,
+        confidence=confidence,
     )
 
     annotated_image = (
@@ -1603,9 +2100,15 @@ async def measure_garment(
             2,
         ),
         size=size,
+        size_distance_cm=(
+            round(size_distance, 2)
+            if size_distance is not None
+            else None
+        ),
         pixels_per_cm=round(
             pixels_per_cm,
             4,
         ),
         annotated_image=encoded_image,
+        **tracking_data,
     )
