@@ -59,20 +59,20 @@ CAMERA_HEIGHT_CM = 100.0
 # A low inference threshold helps dark garments reach the validation stage.
 # A result is never counted from confidence alone; geometry and temporal
 # consistency are checked below.
-INFERENCE_CONFIDENCE = 0.25
-MINIMUM_CONFIDENCE = 0.50
+INFERENCE_CONFIDENCE = 0.15
+MINIMUM_CONFIDENCE = 0.35
 MINIMUM_MASK_AREA_RATIO = 0.04
 MAXIMUM_MASK_AREA_RATIO = 0.55
 
-INFERENCE_IMAGE_SIZE = 960
+INFERENCE_IMAGE_SIZE = 640
 
 # Automatic garment lifecycle settings. At an approximately 450 ms frontend
 # scan interval, three stable frames take about 1.35 seconds. Four empty frames
 # are required before the same station is armed for the next garment.
-STABLE_FRAMES_REQUIRED = 3
-EMPTY_FRAMES_TO_REARM = 4
-MAX_STABLE_WIDTH_CHANGE_CM = 2.0
-MAX_STABLE_LENGTH_CHANGE_CM = 2.5
+STABLE_FRAMES_REQUIRED = 2
+EMPTY_FRAMES_TO_REARM = 12
+MAX_STABLE_WIDTH_CHANGE_CM = 1.5
+MAX_STABLE_LENGTH_CHANGE_CM = 2.0
 
 # These margins are used only to reject obviously incomplete T-shirt masks.
 # The actual size label is still obtained from size_chart.json.
@@ -311,32 +311,97 @@ def update_tracker_ready(
         "length_cm": float(length_cm),
         "confidence": float(confidence),
     }
+def update_tracker_ready(
+    *,
+    garment_type: str,
+    size: str,
+    width_cm: float,
+    length_cm: float,
+    confidence: float,
+) -> dict:
+    """Count one garment after stable measurements and removal."""
 
-        with TRACKER_LOCK:
-        # UNKNOWN හෝ reference එකට නොගැළපෙන results production
-        # count එකට එකතු නොකරන්න.
-        if (
-            size not in COUNTED_SIZES
-            or size in {
-                "UNKNOWN",
-                "REFERENCE_REQUIRED",
-            }
-        ):
-            TRACKER[
-                "stable_samples"
-            ].clear()
+    current_sample = {
+        "garment_type": garment_type,
+        "size": size,
+        "width_cm": float(width_cm),
+        "length_cm": float(length_cm),
+        "confidence": float(confidence),
+    }
 
-            TRACKER[
-                "empty_frames"
-            ] = 0
-
-            TRACKER[
-                "tracking_state"
-            ] = "SIZE_UNKNOWN"
+    with TRACKER_LOCK:
+        # UNKNOWN results production count එකට එකතු නොකරයි.
+        if size not in COUNTED_SIZES or size in {
+            "UNKNOWN",
+            "REFERENCE_REQUIRED",
+        }:
+            TRACKER["stable_samples"].clear()
+            TRACKER["empty_frames"] = 0
+            TRACKER["tracking_state"] = "SIZE_UNKNOWN"
 
             return tracker_snapshot()
 
         TRACKER["empty_frames"] = 0
+
+        # කලින් garment එක count කරලා නම් remove කරන තුරු wait කරන්න.
+        if TRACKER["current_garment_counted"]:
+            TRACKER["tracking_state"] = "WAIT_REMOVAL"
+
+            return tracker_snapshot()
+
+        samples = TRACKER["stable_samples"]
+
+        # Measurements අතර වෙනස වැඩි නම් නැවත stabilizing පටන්ගන්න.
+        if samples and not stable_samples_are_consistent(
+            samples[-1],
+            current_sample,
+        ):
+            samples.clear()
+
+        samples.append(current_sample)
+        TRACKER["tracking_state"] = "STABILIZING"
+
+        if len(samples) < STABLE_FRAMES_REQUIRED:
+            return tracker_snapshot()
+
+        widths = [
+            sample["width_cm"]
+            for sample in samples
+        ]
+
+        lengths = [
+            sample["length_cm"]
+            for sample in samples
+        ]
+
+        confidences = [
+            sample["confidence"]
+            for sample in samples
+        ]
+
+        final_width = float(np.median(widths))
+        final_length = float(np.median(lengths))
+        final_confidence = float(np.median(confidences))
+
+        count_size = size
+
+        TRACKER["counts"][garment_type][count_size] += 1
+
+        record = {
+            "id": datetime.now(timezone.utc).isoformat(),
+            "garment_type": garment_type,
+            "size": count_size,
+            "width_cm": round(final_width, 2),
+            "length_cm": round(final_length, 2),
+            "confidence": round(final_confidence, 4),
+        }
+
+        TRACKER["history"].appendleft(record)
+        TRACKER["current_garment_counted"] = True
+        TRACKER["tracking_state"] = "COUNTED"
+
+        return tracker_snapshot(counted_now=True)
+     
 
 # ==================================================
 # Find latest YOLO model
