@@ -79,7 +79,7 @@ MAX_STABLE_LENGTH_CHANGE_CM = 2.5
 TSHIRT_EXTRA_WIDTH_MARGIN_CM = 10.0
 TSHIRT_EXTRA_LENGTH_MARGIN_CM = 15.0
 TSHIRT_MIN_WIDTH_LENGTH_RATIO = 0.48
-TSHIRT_MAX_WIDTH_LENGTH_RATIO = 1.10
+TSHIRT_MAX_WIDTH_LENGTH_RATIO = 0.90
 
 ROI_MARGIN_X = 0.04
 ROI_MARGIN_Y = 0.04
@@ -312,101 +312,31 @@ def update_tracker_ready(
         "confidence": float(confidence),
     }
 
-    with TRACKER_LOCK:
-        TRACKER["empty_frames"] = 0
+        with TRACKER_LOCK:
+        # UNKNOWN හෝ reference එකට නොගැළපෙන results production
+        # count එකට එකතු නොකරන්න.
+        if (
+            size not in COUNTED_SIZES
+            or size in {
+                "UNKNOWN",
+                "REFERENCE_REQUIRED",
+            }
+        ):
+            TRACKER[
+                "stable_samples"
+            ].clear()
 
-        if TRACKER[
-            "current_garment_counted"
-        ]:
+            TRACKER[
+                "empty_frames"
+            ] = 0
+
             TRACKER[
                 "tracking_state"
-            ] = "WAIT_REMOVAL"
+            ] = "SIZE_UNKNOWN"
+
             return tracker_snapshot()
 
-        samples = TRACKER[
-            "stable_samples"
-        ]
-
-        if (
-            samples
-            and not stable_samples_are_consistent(
-                samples[-1],
-                current_sample,
-            )
-        ):
-            samples.clear()
-
-        samples.append(current_sample)
-        TRACKER[
-            "tracking_state"
-        ] = "STABILIZING"
-
-        if len(samples) < STABLE_FRAMES_REQUIRED:
-            return tracker_snapshot()
-
-        widths = [
-            sample["width_cm"]
-            for sample in samples
-        ]
-        lengths = [
-            sample["length_cm"]
-            for sample in samples
-        ]
-        confidences = [
-            sample["confidence"]
-            for sample in samples
-        ]
-
-        final_width = float(np.median(widths))
-        final_length = float(np.median(lengths))
-        final_confidence = float(
-            np.median(confidences)
-        )
-
-        count_size = (
-            size
-            if size in COUNTED_SIZES
-            else "UNKNOWN"
-        )
-
-        TRACKER["counts"][garment_type][
-            count_size
-        ] += 1
-
-        record = {
-            "id": datetime.now(
-                timezone.utc
-            ).isoformat(),
-            "garment_type": garment_type,
-            "size": count_size,
-            "width_cm": round(
-                final_width,
-                2,
-            ),
-            "length_cm": round(
-                final_length,
-                2,
-            ),
-            "confidence": round(
-                final_confidence,
-                4,
-            ),
-        }
-
-        TRACKER["history"].appendleft(
-            record
-        )
-        TRACKER[
-            "current_garment_counted"
-        ] = True
-        TRACKER[
-            "tracking_state"
-        ] = "COUNTED"
-
-        return tracker_snapshot(
-            counted_now=True
-        )
-
+        TRACKER["empty_frames"] = 0
 
 # ==================================================
 # Find latest YOLO model
