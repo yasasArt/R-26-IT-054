@@ -1,26 +1,25 @@
 {
   "tshirt": [
-    {
-      "size": "S",
-      "width_cm": 49.53,
-      "height_cm": 68.58
-    },
-    {
-      "size": "M",
-      "width_cm": 52.07,
-      "height_cm": 69.85
-    },
-    {
-      "size": "L",
-      "width_cm": 54.61,
-      "height_cm": 71.12
-    },
-    {
-      "size": "XL",
-      "width_cm": 58.42,
-      "height_cm": 72.39
-    }
+    {"size": "S", "width_cm": 45.72, "height_cm": 66.04},
+    {"size": "M", "width_cm": 49.53, "height_cm": 68.58},
+    {"size": "L", "width_cm": 53.34, "height_cm": 71.12},
+    {"size": "XL", "width_cm": 55.88, "height_cm": 74.93},
+    {"size": "XXL", "width_cm": 59.69, "height_cm": 76.20}
   ],
-  "shirt": [],
-  "trouser": []
+  "shirt": [
+    {"size": "XS", "width_cm": 43.18, "height_cm": 66.04},
+    {"size": "S", "width_cm": 45.72, "height_cm": 68.58},
+    {"size": "M", "width_cm": 48.26, "height_cm": 71.12},
+    {"size": "L", "width_cm": 53.34, "height_cm": 73.66},
+    {"size": "XL", "width_cm": 58.42, "height_cm": 76.20},
+    {"size": "XXL", "width_cm": 63.50, "height_cm": 78.74},
+    {"size": "3XL", "width_cm": 68.58, "height_cm": 81.28}
+  ],
+  "trouser": [
+    {"size": "S", "width_cm": 36.83, "height_cm": 88.90},
+    {"size": "M", "width_cm": 39.37, "height_cm": 93.98},
+    {"size": "L", "width_cm": 41.91, "height_cm": 101.60},
+    {"size": "XL", "width_cm": 44.45, "height_cm": 109.22},
+    {"size": "XXL", "width_cm": 46.99, "height_cm": 111.76}
+  ]
 }

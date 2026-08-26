@@ -1,6 +1,7 @@
 import base64
 import json
 import math
+import os
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,18 +45,26 @@ SIZE_CHART_PATH = (
     / "size_chart.json"
 )
 
-MARKER_SIZE_CM = 10.0
-MARKER_ID = 0
+CALIBRATION_PATH = (
+    BACKEND_DIRECTORY
+    / "calibration.json"
+)
+
+# Runtime is marker-free.  The scale is measured once at the fixed 100 cm
+# installation height and stored in calibration.json.  9.15 px/cm is only the
+# initial value observed in the user's earlier 1920x1080 calibration; run
+# calibrate_scale.py once on the final installation before collecting results.
+CAMERA_HEIGHT_CM = 100.0
 
 # A low inference threshold helps dark garments reach the validation stage.
 # A result is never counted from confidence alone; geometry and temporal
 # consistency are checked below.
-INFERENCE_CONFIDENCE = 0.15
-MINIMUM_CONFIDENCE = 0.30
-MINIMUM_MASK_AREA_RATIO = 0.025
+INFERENCE_CONFIDENCE = 0.25
+MINIMUM_CONFIDENCE = 0.50
+MINIMUM_MASK_AREA_RATIO = 0.04
 MAXIMUM_MASK_AREA_RATIO = 0.55
 
-INFERENCE_IMAGE_SIZE = 768
+INFERENCE_IMAGE_SIZE = 960
 
 # Automatic garment lifecycle settings. At an approximately 450 ms frontend
 # scan interval, three stable frames take about 1.35 seconds. Four empty frames
@@ -75,7 +84,7 @@ TSHIRT_MAX_WIDTH_LENGTH_RATIO = 1.10
 ROI_MARGIN_X = 0.04
 ROI_MARGIN_Y = 0.04
 
-SIZE_DISTANCE_LIMIT_CM = 6.0
+SIZE_DISTANCE_LIMIT_CM = 8.0
 
 ALLOWED_GARMENT_TYPES = {
     "tshirt",
@@ -109,6 +118,32 @@ def load_size_chart() -> dict:
 SIZE_CHART = load_size_chart()
 
 
+def load_calibration() -> dict:
+    if not CALIBRATION_PATH.exists():
+        raise FileNotFoundError(
+            f"Calibration file not found:\n{CALIBRATION_PATH}\n"
+            "Run: python calibrate_scale.py"
+        )
+
+    with CALIBRATION_PATH.open("r", encoding="utf-8") as file:
+        calibration = json.load(file)
+
+    required = {"pixels_per_cm", "frame_width", "frame_height"}
+    missing = required.difference(calibration)
+    if missing:
+        raise ValueError(
+            "calibration.json is missing: " + ", ".join(sorted(missing))
+        )
+
+    if float(calibration["pixels_per_cm"]) <= 0:
+        raise ValueError("pixels_per_cm must be greater than zero.")
+
+    return calibration
+
+
+CALIBRATION = load_calibration()
+
+
 # ==================================================
 # Automatic counting and lifecycle state
 # ==================================================
@@ -120,6 +155,7 @@ COUNTED_SIZES = (
     "L",
     "XL",
     "XXL",
+    "3XL",
     "UNKNOWN",
 )
 
@@ -377,6 +413,24 @@ def update_tracker_ready(
 # ==================================================
 
 def find_latest_model() -> Path:
+    configured_model = os.getenv("GARMENT_MODEL_PATH")
+    if configured_model:
+        configured_path = Path(configured_model).expanduser().resolve()
+        if not configured_path.exists():
+            raise FileNotFoundError(
+                f"GARMENT_MODEL_PATH does not exist: {configured_path}"
+            )
+        return configured_path
+
+    preferred_model = (
+        TRAINING_RESULTS
+        / "garment_seg_v2_100cm-2"
+        / "weights"
+        / "best.pt"
+    )
+    if preferred_model.exists():
+        return preferred_model
+
     model_files = list(
         TRAINING_RESULTS.rglob("best.pt")
     )
@@ -416,8 +470,14 @@ print("=" * 65)
 print(f"Model: {MODEL_PATH}")
 print(f"Device: {DEVICE_NAME}")
 print(
-    f"Marker physical size: "
-    f"{MARKER_SIZE_CM} cm"
+    f"Fixed camera height: "
+    f"{CAMERA_HEIGHT_CM:.0f} cm"
+)
+print(
+    "Calibration: "
+    f"{float(CALIBRATION['pixels_per_cm']):.4f} px/cm at "
+    f"{int(CALIBRATION['frame_width'])}x"
+    f"{int(CALIBRATION['frame_height'])}"
 )
 print("Loading YOLO model...")
 
@@ -571,108 +631,83 @@ def extract_detection_zone(
     )
 
 
-# ==================================================
-# ArUco calibration
-# ==================================================
+def pixels_per_cm_for_frame(image: np.ndarray) -> float:
+    """Scale the stored calibration when the browser supplies the same
+    camera aspect ratio at a different resolution.
+    """
+    frame_height, frame_width = image.shape[:2]
+    calibration_width = float(CALIBRATION["frame_width"])
+    calibration_height = float(CALIBRATION["frame_height"])
 
-def detect_pixels_per_cm(
+    width_scale = frame_width / calibration_width
+    height_scale = frame_height / calibration_height
+
+    if abs(width_scale - height_scale) > 0.03:
+        raise ValueError(
+            "Camera aspect ratio changed after calibration. "
+            "Keep the browser camera at the calibrated resolution."
+        )
+
+    resolution_scale = (width_scale + height_scale) / 2.0
+    return float(CALIBRATION["pixels_per_cm"]) * resolution_scale
+
+
+def enhance_low_contrast_frame(
     image: np.ndarray,
-):
-    gray = cv2.cvtColor(
+) -> np.ndarray:
+    """Create a conservative fallback image for garment/background colours
+    that are very similar. Geometry is unchanged, so returned masks still
+    align with the original detection-zone image.
+    """
+    lab_image = cv2.cvtColor(
         image,
-        cv2.COLOR_BGR2GRAY,
+        cv2.COLOR_BGR2LAB,
+    )
+    lightness, channel_a, channel_b = cv2.split(
+        lab_image
     )
 
-    dictionary = (
-        cv2.aruco.getPredefinedDictionary(
-            cv2.aruco.DICT_4X4_50
+    clahe = cv2.createCLAHE(
+        clipLimit=1.8,
+        tileGridSize=(8, 8),
+    )
+    enhanced_lightness = clahe.apply(lightness)
+    enhanced_lab = cv2.merge(
+        (
+            enhanced_lightness,
+            channel_a,
+            channel_b,
         )
     )
-
-    if hasattr(
-        cv2.aruco,
-        "ArucoDetector",
-    ):
-        parameters = (
-            cv2.aruco.DetectorParameters()
-        )
-
-        detector = (
-            cv2.aruco.ArucoDetector(
-                dictionary,
-                parameters,
-            )
-        )
-
-        corners, ids, _ = (
-            detector.detectMarkers(gray)
-        )
-    else:
-        parameters = (
-            cv2.aruco.DetectorParameters_create()
-        )
-
-        corners, ids, _ = (
-            cv2.aruco.detectMarkers(
-                gray,
-                dictionary,
-                parameters=parameters,
-            )
-        )
-
-    if ids is None:
-        return None, None
-
-    marker_ids = ids.flatten()
-
-    if MARKER_ID not in marker_ids:
-        return None, None
-
-    marker_index = int(
-        np.where(
-            marker_ids == MARKER_ID
-        )[0][0]
+    enhanced = cv2.cvtColor(
+        enhanced_lab,
+        cv2.COLOR_LAB2BGR,
     )
 
-    marker_corners = (
-        corners[marker_index][0]
-        .astype(np.float32)
+    blurred = cv2.GaussianBlur(
+        enhanced,
+        (0, 0),
+        1.0,
+    )
+    return cv2.addWeighted(
+        enhanced,
+        1.15,
+        blurred,
+        -0.15,
+        0,
     )
 
-    side_lengths = []
 
-    for index in range(4):
-        current_point = (
-            marker_corners[index]
-        )
+def prediction_has_mask(predictions) -> bool:
+    if not predictions:
+        return False
 
-        next_point = (
-            marker_corners[
-                (index + 1) % 4
-            ]
-        )
-
-        side_lengths.append(
-            float(
-                np.linalg.norm(
-                    current_point
-                    - next_point
-                )
-            )
-        )
-
-    average_side_pixels = float(
-        np.mean(side_lengths)
-    )
-
-    pixels_per_cm = (
-        average_side_pixels
-        / MARKER_SIZE_CM
-    )
-
-    return (
-        pixels_per_cm,
-        marker_corners,
+    result = predictions[0]
+    return bool(
+        result.boxes is not None
+        and len(result.boxes) > 0
+        and result.masks is not None
+        and len(result.masks.data) > 0
     )
 
 
@@ -1811,7 +1846,13 @@ def health():
         "model_loaded": True,
         "model_path": str(MODEL_PATH),
         "device": DEVICE_NAME,
-        "marker_size_cm": MARKER_SIZE_CM,
+        "calibration_mode": "fixed_100cm_marker_free",
+        "camera_height_cm": CAMERA_HEIGHT_CM,
+        "calibrated_pixels_per_cm": float(CALIBRATION["pixels_per_cm"]),
+        "calibration_resolution": [
+            int(CALIBRATION["frame_width"]),
+            int(CALIBRATION["frame_height"]),
+        ],
         "inference_image_size": INFERENCE_IMAGE_SIZE,
         "stable_frames_required": STABLE_FRAMES_REQUIRED,
     }
@@ -1888,30 +1929,20 @@ async def measure_garment(
             detail="Invalid image.",
         )
 
-    detection_zone, _ = (
-        extract_detection_zone(image)
-    )
-
-    (
-        pixels_per_cm,
-        marker_corners,
-    ) = detect_pixels_per_cm(
-        detection_zone
-    )
-
-    if pixels_per_cm is None:
+    try:
+        pixels_per_cm = pixels_per_cm_for_frame(image)
+    except ValueError as error:
         tracking_data = update_tracker_non_ready(
-            "MARKER_MISSING"
+            "CALIBRATION_MISMATCH"
         )
         return make_response(
-            state="MARKER_MISSING",
-            message=(
-                "Calibration marker not detected. "
-                "Keep the complete marker visible."
-            ),
+            state="CALIBRATION_MISMATCH",
+            message=str(error),
             garment_type=garment_type,
             **tracking_data,
         )
+
+    detection_zone, _ = extract_detection_zone(image)
 
     predictions = model.predict(
         source=detection_zone,
@@ -1922,6 +1953,25 @@ async def measure_garment(
         retina_masks=True,
         verbose=False,
     )
+
+    inference_variant = "original"
+
+    # Retry only missed frames. This preserves normal speed while improving
+    # pale-on-pale and dark-on-dark garment detection.
+    if not prediction_has_mask(predictions):
+        enhanced_zone = enhance_low_contrast_frame(
+            detection_zone
+        )
+        predictions = model.predict(
+            source=enhanced_zone,
+            imgsz=INFERENCE_IMAGE_SIZE,
+            conf=INFERENCE_CONFIDENCE,
+            device=DEVICE,
+            half=torch.cuda.is_available(),
+            retina_masks=True,
+            verbose=False,
+        )
+        inference_variant = "contrast_enhanced"
 
     if not predictions:
         tracking_data = update_tracker_non_ready(
@@ -2110,5 +2160,6 @@ async def measure_garment(
             4,
         ),
         annotated_image=encoded_image,
+        inference_variant=inference_variant,
         **tracking_data,
     )
