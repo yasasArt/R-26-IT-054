@@ -6,3 +6,9 @@ Feature_2/00-raw-videos/videos
 Feature_2/01-data-annotation-and-dataset-preparation/generated_clips/train
 Feature_2/01-data-annotation-and-dataset-preparation/generated_clips/validation
 Feature_2/01-data-annotation-and-dataset-preparation/generated_clips/test
+Feature_2/03-yolo-workstation-validation/raw_videos
+Feature_2/03-yolo-workstation-validation/extracted_frames
+Feature_2/03-yolo-workstation-validation/shuffled_frames
+Feature_2/03-yolo-workstation-validation/dataset
+Feature_2/03-yolo-workstation-validation/runs
+Feature_2/03-yolo-workstation-validation/yolov8n.pt
