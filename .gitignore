@@ -1,5 +1,7 @@
 .DS_Store
 
+*__pycache__/
+
 # Feature 2 ignored files
 .vscode
 Feature_2/00-raw-videos/videos
@@ -12,3 +14,5 @@ Feature_2/03-yolo-workstation-validation/shuffled_frames
 Feature_2/03-yolo-workstation-validation/dataset
 Feature_2/03-yolo-workstation-validation/runs
 Feature_2/03-yolo-workstation-validation/yolov8n.pt
+Feature_2/04-backend-implementation/.venv
+Feature_2/04-backend-implementation/garment_counter_backend.egg-info
