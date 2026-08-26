@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict # type: ignore
+from pydantic_settings import BaseSettings, SettingsConfigDict #type:ignore
 
 
 class Settings(BaseSettings):
@@ -53,12 +53,10 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    
 
     return Settings()
 
 
 def clear_settings_cache() -> None:
     
-
     get_settings.cache_clear()

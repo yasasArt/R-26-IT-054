@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Request
 
-from app.api.dependencies import SettingsDependency
-from app.schemas.common import HealthResponse
+from app.api.dependencies import DatabaseDependency, SettingsDependency
+from app.db.migrations import current_schema_version
+from app.schemas.common import DatabaseHealthResponse, HealthResponse
 
 router = APIRouter(tags=["Health"])
 
@@ -27,5 +28,24 @@ async def health_check(
     request: Request,
     settings: SettingsDependency,
 ) -> HealthResponse:
-    
     return build_health_response(request, settings)
+
+
+@router.get(
+    "/health/database",
+    response_model=DatabaseHealthResponse,
+    summary="Check SQLite configuration and schema version",
+)
+def database_health(connection: DatabaseDependency) -> DatabaseHealthResponse:
+
+    foreign_keys = bool(connection.execute("PRAGMA foreign_keys").fetchone()[0])
+    journal_mode = str(connection.execute("PRAGMA journal_mode").fetchone()[0])
+    busy_timeout_ms = int(connection.execute("PRAGMA busy_timeout").fetchone()[0])
+
+    return DatabaseHealthResponse(
+        status="ok",
+        schema_version=current_schema_version(connection),
+        foreign_keys=foreign_keys,
+        journal_mode=journal_mode,
+        busy_timeout_ms=busy_timeout_ms,
+    )
