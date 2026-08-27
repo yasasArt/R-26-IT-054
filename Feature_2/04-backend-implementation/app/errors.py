@@ -1,12 +1,8 @@
-"""Domain errors translated into consistent API responses."""
-
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 
 class ApplicationError(Exception):
-    """Base class for expected business and resource errors."""
-
     status_code = 500
     error_code = "APPLICATION_ERROR"
 
@@ -25,14 +21,17 @@ class ConflictError(ApplicationError):
     error_code = "CONFLICT"
 
 
+class ForbiddenError(ApplicationError):
+    status_code = 403
+    error_code = "FORBIDDEN"
+
+
 class InvalidOperationError(ApplicationError):
     status_code = 422
     error_code = "INVALID_OPERATION"
 
 
 def register_error_handlers(application: FastAPI) -> None:
-    """Register one response contract for expected application failures."""
-
     @application.exception_handler(ApplicationError)
     async def handle_application_error(
         request: Request,

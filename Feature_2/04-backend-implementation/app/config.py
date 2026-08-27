@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     app_data_dir: Path = Path("./data")
     database_path: Path | None = None
     models_dir: Path = Path("./models")
+    minimum_piece_gap_seconds: float = Field(default=1.0, ge=0.1, le=60.0)
 
     api_token: str | None = None
 

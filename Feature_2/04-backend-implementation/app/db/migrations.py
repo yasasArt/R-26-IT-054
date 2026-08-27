@@ -19,10 +19,16 @@ MIGRATIONS = (
         name="initial_garment_counter_schema",
         sql_file=Path(__file__).with_name("schema.sql"),
     ),
+    Migration(
+        version=2,
+        name="piece_event_idempotency_and_cycle_start",
+        sql_file=Path(__file__).with_name("migration_002_piece_events.sql"),
+    ),
 )
 
 
 def _migration_table(connection: sqlite3.Connection) -> None:
+    """Create the migration ledger before checking applied versions."""
 
     connection.execute(
         """
@@ -36,6 +42,7 @@ def _migration_table(connection: sqlite3.Connection) -> None:
 
 
 def _sql_statements(script: str) -> list[str]:
+    """Split a SQL script without breaking statements at arbitrary semicolons."""
 
     statements: list[str] = []
     buffer: list[str] = []
@@ -68,6 +75,7 @@ def current_schema_version(connection: sqlite3.Connection) -> int:
 
 
 def apply_migrations(connection: sqlite3.Connection) -> int:
+    """Apply every pending migration exactly once and return the final version."""
 
     _migration_table(connection)
     completed = applied_versions(connection)
@@ -90,6 +98,7 @@ def apply_migrations(connection: sqlite3.Connection) -> int:
                 """,
                 (migration.version, migration.name),
             )
+            # Version values are defined in source code, never supplied by a user.
             connection.execute(f"PRAGMA user_version = {migration.version}")
 
         completed.add(migration.version)
@@ -98,6 +107,7 @@ def apply_migrations(connection: sqlite3.Connection) -> int:
 
 
 def initialize_database(database_path: str | Path) -> int:
+    """Open a short-lived startup connection and migrate the database."""
 
     connection = connect_database(database_path)
     try:

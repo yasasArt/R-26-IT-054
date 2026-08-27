@@ -108,3 +108,38 @@ class SessionRepository:
         if cursor.rowcount != 1:
             return None
         return self.require_by_id(session_id)
+
+    def set_first_sewing_started_if_missing(
+        self,
+        session_id: int,
+        timestamp: str,
+    ) -> dict:
+        """Latch the first sewing timestamp once; later detector flicker cannot reset it."""
+
+        self.connection.execute(
+            """
+            UPDATE production_sessions
+            SET first_sewing_started_at = ?, updated_at = ?
+            WHERE id = ? AND first_sewing_started_at IS NULL
+            """,
+            (timestamp, timestamp, session_id),
+        )
+        return self.require_by_id(session_id)
+
+    def update_production_summary(
+        self,
+        session_id: int,
+        *,
+        total_pieces: int,
+        average_cycle_seconds: float | None,
+        timestamp: str,
+    ) -> dict:
+        self.connection.execute(
+            """
+            UPDATE production_sessions
+            SET total_pieces = ?, average_cycle_seconds = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (total_pieces, average_cycle_seconds, timestamp, session_id),
+        )
+        return self.require_by_id(session_id)
