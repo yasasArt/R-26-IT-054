@@ -6,6 +6,7 @@ from app.api.dependencies import get_request_settings
 from app.api.router import api_router
 from app.api.routes.health import build_health_response
 from app.config import Settings, get_settings
+from app.errors import register_error_handlers
 from app.lifespan import application_lifespan
 from app.schemas.common import HealthResponse
 
@@ -36,6 +37,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
     application.state.service_ready = False
     application.state.database_ready = False
     application.state.schema_version = 0
+    register_error_handlers(application)
     application.include_router(api_router)
 
     @application.get(
