@@ -72,11 +72,11 @@ MAXIMUM_MASK_AREA_RATIO = 0.50
 INFERENCE_IMAGE_SIZE = 640
 
 # Automatic garment lifecycle settings. At a 200 ms frontend scan interval,
-# three stable frames confirm a measurement. Two consecutive scene-verified
+# three stable frames confirm a measurement. Three consecutive model-confirmed
 # removal frames re-arm the next item, including another garment with exactly
 # the same type, colour and size.
 STABLE_FRAMES_REQUIRED = 3
-EMPTY_FRAMES_TO_REARM = 2
+EMPTY_FRAMES_TO_REARM = 3
 MAX_STABLE_WIDTH_CHANGE_CM = 1.5
 MAX_STABLE_LENGTH_CHANGE_CM = 2.0
 
@@ -84,7 +84,7 @@ MAX_STABLE_LENGTH_CHANGE_CM = 2.0
 # scene must also be visibly different from the scene that was counted.
 # This prevents one stationary garment being counted again after temporary
 # segmentation failures.
-MINIMUM_REMOVAL_SCENE_DIFFERENCE = 0.10
+MINIMUM_REMOVAL_SCENE_DIFFERENCE = 0.025
 
 # These margins are used only to reject obviously incomplete T-shirt masks.
 # The actual size label is still obtained from size_chart.json.
@@ -338,7 +338,6 @@ def tracker_snapshot(
 def update_tracker_non_ready(
     state: str,
     scene_signature: dict | None = None,
-    removal_verified: bool = False,
 ) -> dict:
     """Update lifecycle for an invalid or empty camera frame."""
     with TRACKER_LOCK:
@@ -346,17 +345,14 @@ def update_tracker_non_ready(
 
         if state == "NO_GARMENT":
             if TRACKER["current_garment_counted"]:
-                if removal_verified:
-                    removal_confirmed = True
-                else:
-                    removal_difference = scene_signature_difference(
-                        TRACKER["last_counted_scene_signature"],
-                        scene_signature,
-                    )
-                    removal_confirmed = (
-                        removal_difference
-                        >= MINIMUM_REMOVAL_SCENE_DIFFERENCE
-                    )
+                removal_difference = scene_signature_difference(
+                    TRACKER["last_counted_scene_signature"],
+                    scene_signature,
+                )
+                removal_confirmed = (
+                    removal_difference
+                    >= MINIMUM_REMOVAL_SCENE_DIFFERENCE
+                )
 
                 # A YOLO miss alone cannot re-arm the tracker. The scene must
                 # be sufficiently different from the frame that was counted.
@@ -2400,49 +2396,6 @@ async def measure_garment(
 
     detection_zone, _ = extract_detection_zone(image)
     scene_signature = calculate_scene_signature(detection_zone)
-
-    # Do not let a false-positive prediction on the empty table keep the
-    # previously counted garment on screen.  Scene change is checked before
-    # YOLO so garment removal is visible immediately, even when the model
-    # mistakes the red/black table texture for a garment.
-    with TRACKER_LOCK:
-        garment_already_counted = bool(
-            TRACKER["current_garment_counted"]
-        )
-        counted_scene_signature = TRACKER[
-            "last_counted_scene_signature"
-        ]
-
-    if garment_already_counted:
-        counted_difference = scene_signature_difference(
-            counted_scene_signature,
-            scene_signature,
-        )
-        strong_change_from_counted = (
-            counted_difference
-            >= MINIMUM_REMOVAL_SCENE_DIFFERENCE
-        )
-
-        if strong_change_from_counted:
-            tracking_data = update_tracker_non_ready(
-                "NO_GARMENT",
-                scene_signature=scene_signature,
-                removal_verified=True,
-            )
-            # Hide the previous result immediately. Re-arming still requires
-            # the configured number of verified empty frames, preventing a
-            # duplicate count from a single transient frame.
-            tracking_data["display_measurement"] = None
-            return make_response(
-                state="NO_GARMENT",
-                message=(
-                    "Garment removed. Detection zone is empty."
-                ),
-                garment_type=garment_type,
-                detected=False,
-                pixels_per_cm=round(pixels_per_cm, 4),
-                **tracking_data,
-            )
 
     predictions = model.predict(
         source=detection_zone,
