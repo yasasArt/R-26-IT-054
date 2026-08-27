@@ -1,5 +1,7 @@
-from datetime import datetime
+"""Transactional garment confirmation and live-metric rules."""
+
 import sqlite3
+from datetime import datetime
 
 from app.db.transaction import transaction
 from app.errors import ConflictError, ResourceNotFoundError
@@ -167,7 +169,7 @@ class ProductionService:
                     timestamp=created_at,
                 )
                 summary = self._summary_from(session, aggregate)
-        except sqlite3.IntegrityError as error:
+        except sqlite3.IntegrityError:
             # A concurrent replay may win the unique-key insert race.
             existing = self.pieces.find_by_event_key(session_id, event_key)
             if existing is not None:
@@ -175,7 +177,7 @@ class ProductionService:
                     self._require_session(session_id),
                     existing,
                 )
-            raise error
+            raise
 
         return PieceConfirmationResponse(
             event=PieceEventResponse.model_validate(event),

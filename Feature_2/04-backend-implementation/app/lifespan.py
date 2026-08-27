@@ -1,7 +1,9 @@
+"""FastAPI startup and shutdown lifecycle."""
+
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime #type:ignore
-from typing import AsyncIterator
+from datetime import UTC, datetime
 
 from fastapi import FastAPI
 
@@ -13,7 +15,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def application_lifespan(app: FastAPI) -> AsyncIterator[None]:
-    
+    """Prepare process resources and release them during shutdown.
+
+    Database initialization and model loading will be added to this lifecycle
+    in later phases. Keeping those responsibilities here prevents import-time
+    side effects and makes application tests easy to isolate.
+    """
 
     settings: Settings = app.state.settings
     settings.ensure_directories()

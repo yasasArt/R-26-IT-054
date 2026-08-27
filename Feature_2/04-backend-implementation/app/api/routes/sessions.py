@@ -1,3 +1,7 @@
+"""Production-session lifecycle endpoints."""
+
+from typing import Annotated
+
 from fastapi import APIRouter, Query, status
 
 from app.api.dependencies import DatabaseDependency
@@ -15,7 +19,7 @@ router = APIRouter(prefix="/sessions", tags=["Production sessions"])
 @router.get("/readiness", response_model=SessionReadinessResponse)
 def session_readiness(
     connection: DatabaseDependency,
-    session_mode: SessionMode = Query(default=SessionMode.PRODUCTION),
+    session_mode: Annotated[SessionMode, Query()] = SessionMode.PRODUCTION,
 ) -> SessionReadinessResponse:
     return SessionService(connection).readiness(session_mode)
 

@@ -1,7 +1,12 @@
+"""User-editable camera and controller selection endpoints."""
+
 from fastapi import APIRouter
 
 from app.api.dependencies import DatabaseDependency
-from app.schemas.configuration import DeviceConfigurationResponse, DeviceConfigurationUpdate
+from app.schemas.configuration import (
+    DeviceConfigurationResponse,
+    DeviceConfigurationUpdate,
+)
 from app.services.configuration_service import ConfigurationService
 
 router = APIRouter(prefix="/configuration", tags=["Device configuration"])

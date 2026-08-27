@@ -1,10 +1,15 @@
+"""Device-selection rules and safe connection-state resets."""
+
 import sqlite3
 
 from app.db.transaction import transaction
 from app.errors import ConflictError, InvalidOperationError
 from app.repositories.configuration_repository import ConfigurationRepository
 from app.repositories.session_repository import SessionRepository
-from app.schemas.configuration import DeviceConfigurationResponse, DeviceConfigurationUpdate
+from app.schemas.configuration import (
+    DeviceConfigurationResponse,
+    DeviceConfigurationUpdate,
+)
 from app.time_utils import utc_now_iso
 
 

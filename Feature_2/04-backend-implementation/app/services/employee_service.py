@@ -1,3 +1,5 @@
+"""Employee business rules and transaction boundaries."""
+
 import sqlite3
 
 from app.db.transaction import transaction
@@ -28,6 +30,7 @@ class EmployeeService:
                     timestamp=utc_now_iso(),
                 )
         except sqlite3.IntegrityError as error:
+            # The UNIQUE constraint is the final race-safe protection.
             raise ConflictError(
                 f"Employee number {payload.employee_number} already exists"
             ) from error

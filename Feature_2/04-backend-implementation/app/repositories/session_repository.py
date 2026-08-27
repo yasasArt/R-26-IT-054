@@ -1,3 +1,5 @@
+"""Production-session SQL statements."""
+
 import sqlite3
 
 
@@ -94,7 +96,7 @@ class SessionRepository:
                 timestamp,
             ),
         )
-        return self.require_by_id(int(cursor.lastrowid)) # type: ignore
+        return self.require_by_id(int(cursor.lastrowid))
 
     def complete_active(self, session_id: int, timestamp: str) -> dict | None:
         cursor = self.connection.execute(
@@ -142,4 +144,26 @@ class SessionRepository:
             """,
             (total_pieces, average_cycle_seconds, timestamp, session_id),
         )
+        return self.require_by_id(session_id)
+
+    def update_operator_mode(
+        self,
+        session_id: int,
+        *,
+        mode_before: str,
+        mode_after: str,
+        timestamp: str,
+    ) -> dict | None:
+        """Apply the mode only if the session still has the expected state."""
+
+        cursor = self.connection.execute(
+            """
+            UPDATE production_sessions
+            SET operator_mode = ?, updated_at = ?
+            WHERE id = ? AND status = 'ACTIVE' AND operator_mode = ?
+            """,
+            (mode_after, timestamp, session_id, mode_before),
+        )
+        if cursor.rowcount != 1:
+            return None
         return self.require_by_id(session_id)

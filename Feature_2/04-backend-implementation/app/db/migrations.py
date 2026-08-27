@@ -1,3 +1,5 @@
+"""Small, explicit migration runner for the embedded SQLite database."""
+
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +25,11 @@ MIGRATIONS = (
         version=2,
         name="piece_event_idempotency_and_cycle_start",
         sql_file=Path(__file__).with_name("migration_002_piece_events.sql"),
+    ),
+    Migration(
+        version=3,
+        name="iot_event_idempotency",
+        sql_file=Path(__file__).with_name("migration_003_iot_event_idempotency.sql"),
     ),
 )
 
