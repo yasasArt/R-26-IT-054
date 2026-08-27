@@ -75,7 +75,7 @@ INFERENCE_IMAGE_SIZE = 640
 # three stable frames take about 0.75 seconds. Three scene-verified empty
 # frames re-arm the next garment quickly; raw YOLO misses alone are not enough.
 STABLE_FRAMES_REQUIRED = 3
-EMPTY_FRAMES_TO_REARM = 2
+EMPTY_FRAMES_TO_REARM = 3
 MAX_STABLE_WIDTH_CHANGE_CM = 1.5
 MAX_STABLE_LENGTH_CHANGE_CM = 2.0
 
@@ -83,8 +83,7 @@ MAX_STABLE_LENGTH_CHANGE_CM = 2.0
 # scene must also be visibly different from the scene that was counted.
 # This prevents one stationary garment being counted again after temporary
 # segmentation failures.
-MINIMUM_REMOVAL_SCENE_DIFFERENCE = 0.10
-MAXIMUM_EMPTY_BASELINE_DIFFERENCE = 0.075
+MINIMUM_REMOVAL_SCENE_DIFFERENCE = 0.16
 
 # These margins are used only to reject obviously incomplete T-shirt masks.
 # The actual size label is still obtained from size_chart.json.
@@ -198,7 +197,6 @@ TRACKER = {
     "empty_frames": 0,
     "current_garment_counted": False,
     "last_counted_scene_signature": None,
-    "empty_scene_signature": None,
     "counts": empty_count_table(),
     "history": deque(maxlen=50),
 }
@@ -350,39 +348,21 @@ def update_tracker_non_ready(
                 if removal_verified:
                     removal_confirmed = True
                 else:
-                    empty_baseline = TRACKER["empty_scene_signature"]
+                    removal_difference = scene_signature_difference(
+                        TRACKER["last_counted_scene_signature"],
+                        scene_signature,
+                    )
+                    removal_confirmed = (
+                        removal_difference
+                        >= MINIMUM_REMOVAL_SCENE_DIFFERENCE
+                    )
 
-                    if empty_baseline is not None:
-                        empty_difference = scene_signature_difference(
-                            empty_baseline,
-                            scene_signature,
-                        )
-                        removal_confirmed = (
-                            empty_difference
-                            <= MAXIMUM_EMPTY_BASELINE_DIFFERENCE
-                        )
-                    else:
-                        removal_difference = scene_signature_difference(
-                            TRACKER["last_counted_scene_signature"],
-                            scene_signature,
-                        )
-                        removal_confirmed = (
-                            removal_difference
-                            >= MINIMUM_REMOVAL_SCENE_DIFFERENCE
-                        )
-
-                # The frame must resemble the learned empty table. A YOLO
-                # miss while the garment is still visible cannot re-arm it.
+                # A YOLO miss alone cannot re-arm the tracker. The scene must
+                # be sufficiently different from the frame that was counted.
                 if not removal_confirmed:
                     TRACKER["empty_frames"] = 0
                     TRACKER["tracking_state"] = "WAIT_REMOVAL"
                     return tracker_snapshot()
-
-            else:
-                # Continuously learn the real empty table before a garment is
-                # placed. This is more reliable than comparing only with the
-                # counted garment frame.
-                TRACKER["empty_scene_signature"] = scene_signature
 
             TRACKER["empty_frames"] += 1
 
@@ -2346,7 +2326,6 @@ def reset_counts():
         TRACKER["empty_frames"] = 0
         TRACKER["current_garment_counted"] = False
         TRACKER["last_counted_scene_signature"] = None
-        TRACKER["empty_scene_signature"] = None
         TRACKER["counts"] = empty_count_table()
         TRACKER["history"].clear()
         return tracker_snapshot()
@@ -2430,35 +2409,18 @@ async def measure_garment(
         counted_scene_signature = TRACKER[
             "last_counted_scene_signature"
         ]
-        empty_scene_signature = TRACKER[
-            "empty_scene_signature"
-        ]
 
     if garment_already_counted:
-        matches_empty_baseline = False
-
-        if empty_scene_signature is not None:
-            empty_difference = scene_signature_difference(
-                empty_scene_signature,
-                scene_signature,
-            )
-            matches_empty_baseline = (
-                empty_difference
-                <= MAXIMUM_EMPTY_BASELINE_DIFFERENCE
-            )
-
         counted_difference = scene_signature_difference(
             counted_scene_signature,
             scene_signature,
         )
         strong_change_from_counted = (
-            counted_difference >= 0.18
+            counted_difference
+            >= MINIMUM_REMOVAL_SCENE_DIFFERENCE
         )
 
-        if (
-            matches_empty_baseline
-            or strong_change_from_counted
-        ):
+        if strong_change_from_counted:
             tracking_data = update_tracker_non_ready(
                 "NO_GARMENT",
                 scene_signature=scene_signature,
