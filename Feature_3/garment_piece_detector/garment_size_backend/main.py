@@ -72,11 +72,10 @@ MAXIMUM_MASK_AREA_RATIO = 0.50
 INFERENCE_IMAGE_SIZE = 640
 
 # Automatic garment lifecycle settings. At a 250 ms frontend scan interval,
-# three stable frames take about 0.75 seconds. Twelve consecutive empty frames
-# are required before the station is armed for the next garment. This prevents
-# intermittent missed detections from counting the same garment repeatedly.
+# three stable frames take about 0.75 seconds. Three scene-verified empty
+# frames re-arm the next garment quickly; raw YOLO misses alone are not enough.
 STABLE_FRAMES_REQUIRED = 3
-EMPTY_FRAMES_TO_REARM = 12
+EMPTY_FRAMES_TO_REARM = 2
 MAX_STABLE_WIDTH_CHANGE_CM = 1.5
 MAX_STABLE_LENGTH_CHANGE_CM = 2.0
 
@@ -85,7 +84,7 @@ MAX_STABLE_LENGTH_CHANGE_CM = 2.0
 # This prevents one stationary garment being counted again after temporary
 # segmentation failures.
 MINIMUM_REMOVAL_SCENE_DIFFERENCE = 0.10
-MAXIMUM_EMPTY_BASELINE_DIFFERENCE = 0.055
+MAXIMUM_EMPTY_BASELINE_DIFFERENCE = 0.075
 
 # These margins are used only to reject obviously incomplete T-shirt masks.
 # The actual size label is still obtained from size_chart.json.
@@ -340,6 +339,7 @@ def tracker_snapshot(
 def update_tracker_non_ready(
     state: str,
     scene_signature: dict | None = None,
+    removal_verified: bool = False,
 ) -> dict:
     """Update lifecycle for an invalid or empty camera frame."""
     with TRACKER_LOCK:
@@ -347,26 +347,29 @@ def update_tracker_non_ready(
 
         if state == "NO_GARMENT":
             if TRACKER["current_garment_counted"]:
-                empty_baseline = TRACKER["empty_scene_signature"]
-
-                if empty_baseline is not None:
-                    empty_difference = scene_signature_difference(
-                        empty_baseline,
-                        scene_signature,
-                    )
-                    removal_confirmed = (
-                        empty_difference
-                        <= MAXIMUM_EMPTY_BASELINE_DIFFERENCE
-                    )
+                if removal_verified:
+                    removal_confirmed = True
                 else:
-                    removal_difference = scene_signature_difference(
-                        TRACKER["last_counted_scene_signature"],
-                        scene_signature,
-                    )
-                    removal_confirmed = (
-                        removal_difference
-                        >= MINIMUM_REMOVAL_SCENE_DIFFERENCE
-                    )
+                    empty_baseline = TRACKER["empty_scene_signature"]
+
+                    if empty_baseline is not None:
+                        empty_difference = scene_signature_difference(
+                            empty_baseline,
+                            scene_signature,
+                        )
+                        removal_confirmed = (
+                            empty_difference
+                            <= MAXIMUM_EMPTY_BASELINE_DIFFERENCE
+                        )
+                    else:
+                        removal_difference = scene_signature_difference(
+                            TRACKER["last_counted_scene_signature"],
+                            scene_signature,
+                        )
+                        removal_confirmed = (
+                            removal_difference
+                            >= MINIMUM_REMOVAL_SCENE_DIFFERENCE
+                        )
 
                 # The frame must resemble the learned empty table. A YOLO
                 # miss while the garment is still visible cannot re-arm it.
@@ -1616,7 +1619,7 @@ def refine_garment_mask(
             None,
             background_model,
             foreground_model,
-            2,
+            3,
             cv2.GC_INIT_WITH_MASK,
         )
     except cv2.error:
@@ -2415,6 +2418,66 @@ async def measure_garment(
 
     detection_zone, _ = extract_detection_zone(image)
     scene_signature = calculate_scene_signature(detection_zone)
+
+    # Do not let a false-positive prediction on the empty table keep the
+    # previously counted garment on screen.  Scene change is checked before
+    # YOLO so garment removal is visible immediately, even when the model
+    # mistakes the red/black table texture for a garment.
+    with TRACKER_LOCK:
+        garment_already_counted = bool(
+            TRACKER["current_garment_counted"]
+        )
+        counted_scene_signature = TRACKER[
+            "last_counted_scene_signature"
+        ]
+        empty_scene_signature = TRACKER[
+            "empty_scene_signature"
+        ]
+
+    if garment_already_counted:
+        matches_empty_baseline = False
+
+        if empty_scene_signature is not None:
+            empty_difference = scene_signature_difference(
+                empty_scene_signature,
+                scene_signature,
+            )
+            matches_empty_baseline = (
+                empty_difference
+                <= MAXIMUM_EMPTY_BASELINE_DIFFERENCE
+            )
+
+        counted_difference = scene_signature_difference(
+            counted_scene_signature,
+            scene_signature,
+        )
+        strong_change_from_counted = (
+            counted_difference >= 0.18
+        )
+
+        if (
+            matches_empty_baseline
+            or strong_change_from_counted
+        ):
+            tracking_data = update_tracker_non_ready(
+                "NO_GARMENT",
+                scene_signature=scene_signature,
+                removal_verified=True,
+            )
+            # Hide the previous result immediately. Re-arming still requires
+            # the configured number of verified empty frames, preventing a
+            # duplicate count from a single transient frame.
+            tracking_data["display_measurement"] = None
+            return make_response(
+                state="NO_GARMENT",
+                message=(
+                    "Garment removed. Detection zone is empty."
+                ),
+                garment_type=garment_type,
+                detected=False,
+                pixels_per_cm=round(pixels_per_cm, 4),
+                **tracking_data,
+            )
 
     predictions = model.predict(
         source=detection_zone,
