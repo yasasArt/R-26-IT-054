@@ -40,6 +40,11 @@ TRAINING_RESULTS = (
     / "training_results"
 )
 
+EXPERIMENT_RESULTS = (
+    PROJECT_ROOT
+    / "experiment_results"
+)
+
 SIZE_CHART_PATH = (
     BACKEND_DIRECTORY
     / "size_chart.json"
@@ -59,27 +64,39 @@ CAMERA_HEIGHT_CM = 100.0
 # A low inference threshold helps dark garments reach the validation stage.
 # A result is never counted from confidence alone; geometry and temporal
 # consistency are checked below.
-INFERENCE_CONFIDENCE = 0.15
-MINIMUM_CONFIDENCE = 0.35
+INFERENCE_CONFIDENCE = 0.25
+MINIMUM_CONFIDENCE = 0.60
 MINIMUM_MASK_AREA_RATIO = 0.04
-MAXIMUM_MASK_AREA_RATIO = 0.55
+MAXIMUM_MASK_AREA_RATIO = 0.50
 
 INFERENCE_IMAGE_SIZE = 640
 
-# Automatic garment lifecycle settings. At an approximately 450 ms frontend
-# scan interval, three stable frames take about 1.35 seconds. Four empty frames
-# are required before the same station is armed for the next garment.
-STABLE_FRAMES_REQUIRED = 2
+# Automatic garment lifecycle settings. At a 250 ms frontend scan interval,
+# three stable frames take about 0.75 seconds. Twelve consecutive empty frames
+# are required before the station is armed for the next garment. This prevents
+# intermittent missed detections from counting the same garment repeatedly.
+STABLE_FRAMES_REQUIRED = 3
 EMPTY_FRAMES_TO_REARM = 12
 MAX_STABLE_WIDTH_CHANGE_CM = 1.5
 MAX_STABLE_LENGTH_CHANGE_CM = 2.0
+
+# A YOLO miss is not proof that the garment was removed. The current camera
+# scene must also be visibly different from the scene that was counted.
+# This prevents one stationary garment being counted again after temporary
+# segmentation failures.
+MINIMUM_REMOVAL_SCENE_DIFFERENCE = 0.10
+MAXIMUM_EMPTY_BASELINE_DIFFERENCE = 0.055
 
 # These margins are used only to reject obviously incomplete T-shirt masks.
 # The actual size label is still obtained from size_chart.json.
 TSHIRT_EXTRA_WIDTH_MARGIN_CM = 10.0
 TSHIRT_EXTRA_LENGTH_MARGIN_CM = 15.0
-TSHIRT_MIN_WIDTH_LENGTH_RATIO = 0.48
-TSHIRT_MAX_WIDTH_LENGTH_RATIO = 0.90
+# The garment is automatically deskewed, so a complete T-shirt may still
+# look wider/shorter than the catalogue reference because of sleeves,
+# relaxed-fit cuts and perspective. Keep this as an extreme-fragment guard,
+# not as a strict fashion-size rule.
+TSHIRT_MIN_WIDTH_LENGTH_RATIO = 0.35
+TSHIRT_MAX_WIDTH_LENGTH_RATIO = 1.10
 
 ROI_MARGIN_X = 0.04
 ROI_MARGIN_Y = 0.04
@@ -181,9 +198,64 @@ TRACKER = {
     ),
     "empty_frames": 0,
     "current_garment_counted": False,
+    "last_counted_scene_signature": None,
+    "empty_scene_signature": None,
     "counts": empty_count_table(),
     "history": deque(maxlen=50),
 }
+
+
+def calculate_scene_signature(image: np.ndarray) -> dict:
+    """Create a small colour-and-edge signature for removal verification."""
+
+    small_image = cv2.resize(
+        image,
+        (64, 36),
+        interpolation=cv2.INTER_AREA,
+    )
+    small_image = cv2.GaussianBlur(
+        small_image,
+        (5, 5),
+        0,
+    )
+    colour = small_image.astype(np.float32) / 255.0
+
+    gray = cv2.cvtColor(small_image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150).astype(np.float32) / 255.0
+
+    return {
+        "colour": colour,
+        "edges": edges,
+    }
+
+
+def scene_signature_difference(
+    first_signature: dict | None,
+    second_signature: dict | None,
+) -> float:
+    """Return 0 for the same scene and a larger value for a changed scene."""
+
+    if first_signature is None or second_signature is None:
+        return 0.0
+
+    colour_difference = float(
+        np.mean(
+            np.abs(
+                first_signature["colour"]
+                - second_signature["colour"]
+            )
+        )
+    )
+    edge_difference = float(
+        np.mean(
+            np.abs(
+                first_signature["edges"]
+                - second_signature["edges"]
+            )
+        )
+    )
+
+    return colour_difference * 0.70 + edge_difference * 0.30
 
 
 def tracker_snapshot(
@@ -201,6 +273,44 @@ def tracker_snapshot(
         for size_counts in counts.values()
         for count in size_counts.values()
     )
+
+    display_measurement = None
+
+    if (
+        TRACKER["current_garment_counted"]
+        and TRACKER["history"]
+    ):
+        latest_record = TRACKER["history"][0]
+        display_measurement = {
+            "garment_type": latest_record["garment_type"],
+            "size": latest_record["size"],
+            "width_cm": float(latest_record["width_cm"]),
+            "length_cm": float(latest_record["length_cm"]),
+            "confidence": float(latest_record["confidence"]),
+        }
+    elif TRACKER["stable_samples"]:
+        samples = list(TRACKER["stable_samples"])
+        median_width = float(
+            np.median([sample["width_cm"] for sample in samples])
+        )
+        median_length = float(
+            np.median([sample["length_cm"] for sample in samples])
+        )
+        median_confidence = float(
+            np.median([sample["confidence"] for sample in samples])
+        )
+        median_size, _ = classify_size(
+            samples[-1]["garment_type"],
+            median_width,
+            median_length,
+        )
+        display_measurement = {
+            "garment_type": samples[-1]["garment_type"],
+            "size": median_size,
+            "width_cm": median_width,
+            "length_cm": median_length,
+            "confidence": median_confidence,
+        }
 
     return {
         "tracking_state": (
@@ -223,17 +333,54 @@ def tracker_snapshot(
         "recent_history": list(
             TRACKER["history"]
         )[:10],
+        "display_measurement": display_measurement,
     }
 
 
 def update_tracker_non_ready(
     state: str,
+    scene_signature: dict | None = None,
 ) -> dict:
     """Update lifecycle for an invalid or empty camera frame."""
     with TRACKER_LOCK:
         TRACKER["stable_samples"].clear()
 
         if state == "NO_GARMENT":
+            if TRACKER["current_garment_counted"]:
+                empty_baseline = TRACKER["empty_scene_signature"]
+
+                if empty_baseline is not None:
+                    empty_difference = scene_signature_difference(
+                        empty_baseline,
+                        scene_signature,
+                    )
+                    removal_confirmed = (
+                        empty_difference
+                        <= MAXIMUM_EMPTY_BASELINE_DIFFERENCE
+                    )
+                else:
+                    removal_difference = scene_signature_difference(
+                        TRACKER["last_counted_scene_signature"],
+                        scene_signature,
+                    )
+                    removal_confirmed = (
+                        removal_difference
+                        >= MINIMUM_REMOVAL_SCENE_DIFFERENCE
+                    )
+
+                # The frame must resemble the learned empty table. A YOLO
+                # miss while the garment is still visible cannot re-arm it.
+                if not removal_confirmed:
+                    TRACKER["empty_frames"] = 0
+                    TRACKER["tracking_state"] = "WAIT_REMOVAL"
+                    return tracker_snapshot()
+
+            else:
+                # Continuously learn the real empty table before a garment is
+                # placed. This is more reliable than comparing only with the
+                # counted garment frame.
+                TRACKER["empty_scene_signature"] = scene_signature
+
             TRACKER["empty_frames"] += 1
 
             if (
@@ -246,6 +393,9 @@ def update_tracker_non_ready(
                 TRACKER[
                     "tracking_state"
                 ] = "EMPTY"
+                TRACKER[
+                    "last_counted_scene_signature"
+                ] = None
             elif TRACKER[
                 "current_garment_counted"
             ]:
@@ -302,22 +452,7 @@ def update_tracker_ready(
     width_cm: float,
     length_cm: float,
     confidence: float,
-) -> dict:
-    """Count one garment only after consistent frames and one removal."""
-    current_sample = {
-        "garment_type": garment_type,
-        "size": size,
-        "width_cm": float(width_cm),
-        "length_cm": float(length_cm),
-        "confidence": float(confidence),
-    }
-def update_tracker_ready(
-    *,
-    garment_type: str,
-    size: str,
-    width_cm: float,
-    length_cm: float,
-    confidence: float,
+    scene_signature: dict | None = None,
 ) -> dict:
     """Count one garment after stable measurements and removal."""
 
@@ -383,7 +518,21 @@ def update_tracker_ready(
         final_length = float(np.median(lengths))
         final_confidence = float(np.median(confidences))
 
-        count_size = size
+        # Reclassify from the robust median dimensions instead of trusting
+        # only the final frame in the stable sequence.
+        count_size, _ = classify_size(
+            garment_type,
+            final_width,
+            final_length,
+        )
+
+        if count_size not in COUNTED_SIZES or count_size in {
+            "UNKNOWN",
+            "REFERENCE_REQUIRED",
+        }:
+            TRACKER["stable_samples"].clear()
+            TRACKER["tracking_state"] = "SIZE_UNKNOWN"
+            return tracker_snapshot()
 
         TRACKER["counts"][garment_type][count_size] += 1
 
@@ -398,6 +547,7 @@ def update_tracker_ready(
 
         TRACKER["history"].appendleft(record)
         TRACKER["current_garment_counted"] = True
+        TRACKER["last_counted_scene_signature"] = scene_signature
         TRACKER["tracking_state"] = "COUNTED"
 
         return tracker_snapshot(counted_now=True)
@@ -417,23 +567,34 @@ def find_latest_model() -> Path:
             )
         return configured_path
 
-    preferred_model = (
+    preferred_v5_model = (
+        EXPERIMENT_RESULTS
+        / "garment_seg_100cm_clean_v5"
+        / "train"
+        / "weights"
+        / "best.pt"
+    )
+    if preferred_v5_model.exists():
+        return preferred_v5_model
+
+    legacy_model = (
         TRAINING_RESULTS
         / "garment_seg_v2_100cm-2"
         / "weights"
         / "best.pt"
     )
-    if preferred_model.exists():
-        return preferred_model
+    if legacy_model.exists():
+        return legacy_model
 
-    model_files = list(
-        TRAINING_RESULTS.rglob("best.pt")
+    model_files = (
+        list(EXPERIMENT_RESULTS.rglob("best.pt"))
+        + list(TRAINING_RESULTS.rglob("best.pt"))
     )
 
     if not model_files:
         raise FileNotFoundError(
             "No best.pt model was found inside "
-            "training_results."
+            "experiment_results or training_results."
         )
 
     return max(
@@ -519,6 +680,9 @@ def warm_up_model():
             source=dummy_image,
             imgsz=640,
             conf=INFERENCE_CONFIDENCE,
+            iou=0.45,
+            max_det=3,
+            agnostic_nms=True,
             device=DEVICE,
             half=torch.cuda.is_available(),
             verbose=False,
@@ -1122,6 +1286,7 @@ def select_best_garment_mask(
 def rotate_image_and_mask(
     image: np.ndarray,
     mask: np.ndarray,
+    garment_type: str,
 ):
     y_values, x_values = np.where(
         mask > 0
@@ -1278,10 +1443,237 @@ def rotate_image_and_mask(
         x1:x2 + 1,
     ]
 
+    # PCA has a 180-degree ambiguity. Ensure the collar/waist side is at the
+    # top by comparing foreground widths near both ends. T-shirts and shirts
+    # are wider at the sleeve/shoulder end; trousers contain more continuous
+    # foreground at the waistband end than at the separated leg openings.
+    cropped_y, _ = np.where(cropped_mask > 0)
+    garment_top = int(cropped_y.min())
+    garment_bottom = int(cropped_y.max())
+    garment_height = garment_bottom - garment_top + 1
+    row_foreground = np.count_nonzero(cropped_mask > 0, axis=1)
+
+    upper_start = int(garment_top + garment_height * 0.08)
+    upper_end = int(garment_top + garment_height * 0.34)
+    lower_start = int(garment_top + garment_height * 0.66)
+    lower_end = int(garment_top + garment_height * 0.92)
+
+    upper_values = row_foreground[upper_start:upper_end + 1]
+    lower_values = row_foreground[lower_start:lower_end + 1]
+    upper_values = upper_values[upper_values > 0]
+    lower_values = lower_values[lower_values > 0]
+
+    if len(upper_values) and len(lower_values):
+        upper_score = float(np.percentile(upper_values, 75))
+        lower_score = float(np.percentile(lower_values, 75))
+
+        if lower_score > upper_score * 1.08:
+            cropped_image = cv2.rotate(
+                cropped_image,
+                cv2.ROTATE_180,
+            )
+            cropped_mask = cv2.rotate(
+                cropped_mask,
+                cv2.ROTATE_180,
+            )
+            print(
+                f"Auto orientation corrected | {garment_type} | "
+                "collar/waist moved to top"
+            )
+
     return (
         cropped_image,
         cropped_mask,
     )
+
+
+# ==================================================
+# Mask boundary refinement
+# ==================================================
+
+def refine_garment_mask(
+    image: np.ndarray,
+    initial_mask: np.ndarray,
+) -> np.ndarray:
+    """
+    Use the YOLO mask as a GrabCut prior to remove table/background regions
+    that occasionally leak into the segmentation. If refinement is not
+    trustworthy, return the original YOLO mask unchanged.
+    """
+
+    image_height, image_width = image.shape[:2]
+    maximum_side = max(image_height, image_width)
+    resize_scale = min(1.0, 640.0 / max(maximum_side, 1))
+
+    working_width = max(1, int(round(image_width * resize_scale)))
+    working_height = max(1, int(round(image_height * resize_scale)))
+
+    working_image = cv2.resize(
+        image,
+        (working_width, working_height),
+        interpolation=cv2.INTER_AREA,
+    )
+    working_mask = cv2.resize(
+        (initial_mask > 0).astype(np.uint8) * 255,
+        (working_width, working_height),
+        interpolation=cv2.INTER_NEAREST,
+    )
+
+    initial_area = int(np.count_nonzero(working_mask))
+    if initial_area < 100:
+        return initial_mask
+
+    kernel_size = max(5, int(round(min(working_height, working_width) * 0.02)))
+    if kernel_size % 2 == 0:
+        kernel_size += 1
+    kernel = np.ones((kernel_size, kernel_size), dtype=np.uint8)
+
+    dilated_mask = cv2.dilate(working_mask, kernel, iterations=1)
+
+    grabcut_mask = np.full(
+        (working_height, working_width),
+        cv2.GC_BGD,
+        dtype=np.uint8,
+    )
+    grabcut_mask[dilated_mask > 0] = cv2.GC_PR_BGD
+    grabcut_mask[working_mask > 0] = cv2.GC_PR_FGD
+
+    # Learn the fixed table/background colours from pixels outside the YOLO
+    # region. Foreground seeds are selected by colour distance from those
+    # background clusters. This prevents a leaked red/white table section
+    # from becoming the definite-foreground seed.
+    lab_image = cv2.cvtColor(
+        working_image,
+        cv2.COLOR_BGR2LAB,
+    ).astype(np.float32)
+    background_pixels = lab_image[dilated_mask == 0]
+
+    if len(background_pixels) < 100:
+        return initial_mask
+
+    sample_step = max(1, int(math.ceil(len(background_pixels) / 6000)))
+    background_sample = background_pixels[::sample_step]
+    cluster_count = min(4, max(1, len(background_sample) // 100))
+    criteria = (
+        cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
+        30,
+        0.5,
+    )
+
+    cv2.setRNGSeed(42)
+    try:
+        _, _, background_centres = cv2.kmeans(
+            background_sample,
+            cluster_count,
+            None,
+            criteria,
+            5,
+            cv2.KMEANS_PP_CENTERS,
+        )
+    except cv2.error:
+        return initial_mask
+
+    colour_distances = np.linalg.norm(
+        lab_image[:, :, None, :] - background_centres[None, None, :, :],
+        axis=3,
+    )
+    nearest_background_distance = np.min(colour_distances, axis=2)
+
+    outside_distances = nearest_background_distance[dilated_mask == 0]
+    background_threshold = max(
+        8.0,
+        float(np.percentile(outside_distances, 95)) + 3.0,
+    )
+    inside_distances = nearest_background_distance[working_mask > 0]
+    foreground_threshold = max(
+        background_threshold + 6.0,
+        float(np.percentile(inside_distances, 70)),
+    )
+
+    background_like_leak = (
+        (working_mask > 0)
+        & (nearest_background_distance <= background_threshold)
+    )
+    grabcut_mask[background_like_leak] = cv2.GC_PR_BGD
+
+    sure_foreground = (
+        (working_mask > 0)
+        & (nearest_background_distance >= foreground_threshold)
+    )
+
+    if int(np.count_nonzero(sure_foreground)) < 25:
+        return initial_mask
+
+    grabcut_mask[sure_foreground] = cv2.GC_FGD
+
+    background_model = np.zeros((1, 65), dtype=np.float64)
+    foreground_model = np.zeros((1, 65), dtype=np.float64)
+
+    try:
+        cv2.grabCut(
+            working_image,
+            grabcut_mask,
+            None,
+            background_model,
+            foreground_model,
+            2,
+            cv2.GC_INIT_WITH_MASK,
+        )
+    except cv2.error:
+        return initial_mask
+
+    refined_mask = np.where(
+        (grabcut_mask == cv2.GC_FGD)
+        | (grabcut_mask == cv2.GC_PR_FGD),
+        255,
+        0,
+    ).astype(np.uint8)
+    refined_mask[dilated_mask == 0] = 0
+
+    refined_mask = cv2.morphologyEx(
+        refined_mask,
+        cv2.MORPH_CLOSE,
+        np.ones((7, 7), dtype=np.uint8),
+        iterations=2,
+    )
+    refined_mask = cv2.morphologyEx(
+        refined_mask,
+        cv2.MORPH_OPEN,
+        np.ones((3, 3), dtype=np.uint8),
+        iterations=1,
+    )
+
+    component_count, labels, stats, _ = cv2.connectedComponentsWithStats(
+        refined_mask,
+        connectivity=8,
+    )
+    if component_count <= 1:
+        return initial_mask
+
+    largest_index = 1 + int(
+        np.argmax(stats[1:, cv2.CC_STAT_AREA])
+    )
+    refined_mask = (labels == largest_index).astype(np.uint8) * 255
+    refined_area = int(np.count_nonzero(refined_mask))
+    retained_ratio = refined_area / max(initial_area, 1)
+
+    # Reject refinements that removed most of the garment or expanded beyond
+    # the model prior. This keeps the operation a safe correction, not a new
+    # uncontrolled segmentation method.
+    if not 0.45 <= retained_ratio <= 1.05:
+        return initial_mask
+
+    refined_mask = cv2.resize(
+        refined_mask,
+        (image_width, image_height),
+        interpolation=cv2.INTER_NEAREST,
+    )
+
+    print(
+        "Mask refinement accepted | "
+        f"retained_ratio={retained_ratio:.3f}"
+    )
+    return refined_mask
 
 
 # ==================================================
@@ -1359,159 +1751,240 @@ def row_measurement(
     )
 
 
+def column_measurement(
+    mask: np.ndarray,
+    start_column: int,
+    end_column: int,
+):
+    """Find a stable straight vertical garment measurement."""
+
+    candidates = []
+    start_column = max(int(start_column), 0)
+    end_column = min(int(end_column), mask.shape[1] - 1)
+
+    for column in range(start_column, end_column + 1):
+        y_values = np.where(mask[:, column] > 0)[0]
+
+        if len(y_values) < 2:
+            continue
+
+        top_y = int(y_values.min())
+        bottom_y = int(y_values.max())
+        height = bottom_y - top_y + 1
+        candidates.append((height, column, top_y, bottom_y))
+
+    if not candidates:
+        raise ValueError(
+            "Could not calculate vertical measurement."
+        )
+
+    median_height = float(
+        np.median([item[0] for item in candidates])
+    )
+
+    return min(
+        candidates,
+        key=lambda item: abs(item[0] - median_height),
+    )
+
+
+def longest_column_measurement(
+    mask: np.ndarray,
+    start_column: int,
+    end_column: int,
+):
+    """Find the collar-centre to bottom-hem vertical extent."""
+
+    candidates = []
+    start_column = max(int(start_column), 0)
+    end_column = min(int(end_column), mask.shape[1] - 1)
+
+    for column in range(start_column, end_column + 1):
+        y_values = np.where(mask[:, column] > 0)[0]
+        if len(y_values) < 2:
+            continue
+
+        top_y = int(y_values.min())
+        bottom_y = int(y_values.max())
+        extent = bottom_y - top_y + 1
+        candidates.append((extent, column, top_y, bottom_y))
+
+    if not candidates:
+        raise ValueError(
+            "Could not calculate collar-to-hem measurement."
+        )
+
+    return max(candidates, key=lambda item: item[0])
+
+
+def body_chest_measurement(
+    mask: np.ndarray,
+    top_y: int,
+    bottom_y: int,
+    left_x: int,
+    right_x: int,
+):
+    """
+    Measure the persistent torso width below both sleeves. A column must be
+    garment foreground through most torso rows, so short-lived mask leaks and
+    sleeve protrusions cannot enlarge the chest width.
+    """
+
+    total_height = bottom_y - top_y + 1
+    torso_start = int(top_y + total_height * 0.34)
+    torso_end = int(top_y + total_height * 0.78)
+    torso = mask[torso_start:torso_end + 1, left_x:right_x + 1] > 0
+
+    if torso.size == 0:
+        raise ValueError("Could not locate the T-shirt body region.")
+
+    column_support = np.mean(torso, axis=0)
+    persistent_columns = np.where(column_support >= 0.70)[0]
+
+    if len(persistent_columns) < 2:
+        return row_measurement(
+            mask,
+            int(top_y + total_height * 0.36),
+            int(top_y + total_height * 0.46),
+        )
+
+    # Split supported columns into continuous runs and keep the widest body
+    # run. Isolated table/background strips are therefore ignored.
+    split_points = np.where(np.diff(persistent_columns) > 1)[0] + 1
+    runs = np.split(persistent_columns, split_points)
+    body_run = max(runs, key=len)
+
+    body_left_x = left_x + int(body_run[0])
+    body_right_x = left_x + int(body_run[-1])
+    body_width = body_right_x - body_left_x + 1
+
+    target_row = int(top_y + total_height * 0.42)
+    candidate_rows = range(
+        int(top_y + total_height * 0.36),
+        int(top_y + total_height * 0.48) + 1,
+    )
+    width_y = min(
+        candidate_rows,
+        key=lambda row: (
+            0 if (
+                mask[row, body_left_x] > 0
+                and mask[row, body_right_x] > 0
+            ) else 1,
+            abs(row - target_row),
+        ),
+    )
+
+    return (
+        int(body_width),
+        int(width_y),
+        int(body_left_x),
+        int(body_right_x),
+    )
+
+
 def calculate_straight_measurements(
     mask: np.ndarray,
     garment_type: str,
 ):
-    y_values, x_values = np.where(
-        mask > 0
-    )
+    """
+    T-shirt/Shirt:
+        width  = straight body/chest line below both sleeves
+        length = centre collar to centre bottom hem
 
-    top_y = int(
-        y_values.min()
-    )
+    Trouser:
+        width  = flat waistband width
+        length = straight outside seam (not the crotch/centre line)
+    """
 
-    bottom_y = int(
-        y_values.max()
-    )
+    y_values, x_values = np.where(mask > 0)
 
-    total_height = (
-        bottom_y - top_y + 1
-    )
+    if len(x_values) == 0 or len(y_values) == 0:
+        raise ValueError("Garment mask is empty.")
 
-    if garment_type in {
-        "tshirt",
-        "shirt",
-    }:
-        upper_limit = int(
-            top_y
-            + total_height * 0.35
-        )
+    top_y = int(y_values.min())
+    bottom_y = int(y_values.max())
+    left_x = int(x_values.min())
+    right_x = int(x_values.max())
 
-        upper_widths = []
+    total_height = bottom_y - top_y + 1
+    total_width = right_x - left_x + 1
 
-        for row in range(
+    if garment_type in {"tshirt", "shirt"}:
+        # Straight line across the body immediately below both sleeves.
+        (
+            width_pixels,
+            width_y,
+            width_left_x,
+            width_right_x,
+        ) = body_chest_measurement(
+            mask,
             top_y,
-            upper_limit + 1,
-        ):
-            row_x = np.where(
-                mask[row] > 0
-            )[0]
-
-            if len(row_x) >= 2:
-                upper_widths.append(
-                    (
-                        row,
-                        int(
-                            row_x.max()
-                            - row_x.min()
-                            + 1
-                        ),
-                    )
-                )
-
-        maximum_upper_width = max(
-            width
-            for _, width
-            in upper_widths
+            bottom_y,
+            left_x,
+            right_x,
         )
 
-        shoulder_threshold = (
-            maximum_upper_width * 0.70
+        # Exact requested definition: centre collar to centre bottom edge.
+        (
+            height_pixels,
+            height_x,
+            height_top_y,
+            height_bottom_y,
+        ) = longest_column_measurement(
+            mask,
+            int(left_x + total_width * 0.47),
+            int(left_x + total_width * 0.53),
         )
 
-        shoulder_y = next(
-            row
-            for row, width
-            in upper_widths
-            if width
-            >= shoulder_threshold
-        )
-
-        garment_height_pixels = (
-            bottom_y - shoulder_y + 1
-        )
-
-        chest_start = int(
-            shoulder_y
-            + garment_height_pixels * 0.25
-        )
-
-        chest_end = int(
-            shoulder_y
-            + garment_height_pixels * 0.35
-        )
+    elif garment_type == "trouser":
+        waist_start = int(top_y + total_height * 0.03)
+        waist_end = int(top_y + total_height * 0.12)
 
         (
             width_pixels,
             width_y,
-            left_x,
-            right_x,
-        ) = row_measurement(
+            width_left_x,
+            width_right_x,
+        ) = row_measurement(mask, waist_start, waist_end)
+
+        # The centre column ends at the crotch. Measure both outer seam
+        # bands and keep the longer complete seam.
+        left_result = column_measurement(
             mask,
-            chest_start,
-            chest_end,
+            int(left_x + total_width * 0.05),
+            int(left_x + total_width * 0.20),
+        )
+        right_result = column_measurement(
+            mask,
+            int(left_x + total_width * 0.80),
+            int(left_x + total_width * 0.95),
         )
 
-        height_start_y = shoulder_y
+        (
+            height_pixels,
+            height_x,
+            height_top_y,
+            height_bottom_y,
+        ) = max(
+            (left_result, right_result),
+            key=lambda result: result[0],
+        )
 
     else:
-        garment_height_pixels = (
-            bottom_y - top_y + 1
+        raise ValueError(
+            f"Unsupported garment type: {garment_type}"
         )
-
-        waist_start = int(
-            top_y
-            + garment_height_pixels * 0.03
-        )
-
-        waist_end = int(
-            top_y
-            + garment_height_pixels * 0.12
-        )
-
-        (
-            width_pixels,
-            width_y,
-            left_x,
-            right_x,
-        ) = row_measurement(
-            mask,
-            waist_start,
-            waist_end,
-        )
-
-        height_start_y = top_y
-
-    centre_x = int(
-        (
-            x_values.min()
-            + x_values.max()
-        ) / 2
-    )
 
     measurement_points = {
-        "width_start": (
-            left_x,
-            width_y,
-        ),
-        "width_end": (
-            right_x,
-            width_y,
-        ),
-        "height_start": (
-            centre_x,
-            height_start_y,
-        ),
-        "height_end": (
-            centre_x,
-            bottom_y,
-        ),
+        "width_start": (int(width_left_x), int(width_y)),
+        "width_end": (int(width_right_x), int(width_y)),
+        "height_start": (int(height_x), int(height_top_y)),
+        "height_end": (int(height_x), int(height_bottom_y)),
     }
 
     return (
         float(width_pixels),
-        float(garment_height_pixels),
+        float(height_pixels),
         measurement_points,
     )
 
@@ -1608,7 +2081,8 @@ def validate_physical_measurement(
     ):
         return (
             False,
-            "Only part of the garment was segmented: invalid silhouette ratio.",
+            "Garment shape is incomplete or heavily folded. "
+            "Keep the complete garment inside the detection zone.",
         )
 
     return True, "Complete garment geometry accepted."
@@ -1868,6 +2342,8 @@ def reset_counts():
         TRACKER["stable_samples"].clear()
         TRACKER["empty_frames"] = 0
         TRACKER["current_garment_counted"] = False
+        TRACKER["last_counted_scene_signature"] = None
+        TRACKER["empty_scene_signature"] = None
         TRACKER["counts"] = empty_count_table()
         TRACKER["history"].clear()
         return tracker_snapshot()
@@ -1938,11 +2414,15 @@ async def measure_garment(
         )
 
     detection_zone, _ = extract_detection_zone(image)
+    scene_signature = calculate_scene_signature(detection_zone)
 
     predictions = model.predict(
         source=detection_zone,
         imgsz=INFERENCE_IMAGE_SIZE,
         conf=INFERENCE_CONFIDENCE,
+        iou=0.45,
+        max_det=3,
+        agnostic_nms=True,
         device=DEVICE,
         half=torch.cuda.is_available(),
         retina_masks=True,
@@ -1961,6 +2441,9 @@ async def measure_garment(
             source=enhanced_zone,
             imgsz=INFERENCE_IMAGE_SIZE,
             conf=INFERENCE_CONFIDENCE,
+            iou=0.45,
+            max_det=3,
+            agnostic_nms=True,
             device=DEVICE,
             half=torch.cuda.is_available(),
             retina_masks=True,
@@ -1970,7 +2453,8 @@ async def measure_garment(
 
     if not predictions:
         tracking_data = update_tracker_non_ready(
-            "NO_GARMENT"
+            "NO_GARMENT",
+            scene_signature=scene_signature,
         )
         return make_response(
             state="NO_GARMENT",
@@ -1997,7 +2481,8 @@ async def measure_garment(
     
     if garment_mask is None:
         tracking_data = update_tracker_non_ready(
-            mask_state
+            mask_state,
+            scene_signature=scene_signature,
         )
         return make_response(
             state=mask_state,
@@ -2010,12 +2495,18 @@ async def measure_garment(
             **tracking_data,
         )
 
+    garment_mask = refine_garment_mask(
+        detection_zone,
+        garment_mask,
+    )
+
     (
         upright_image,
         upright_mask,
     ) = rotate_image_and_mask(
         detection_zone,
         garment_mask,
+        garment_type,
     )
 
     try:
@@ -2029,7 +2520,8 @@ async def measure_garment(
         )
     except ValueError as error:
         tracking_data = update_tracker_non_ready(
-            "MEASUREMENT_FAILED"
+            "MEASUREMENT_FAILED",
+            scene_signature=scene_signature,
         )
         return make_response(
             state="MEASUREMENT_FAILED",
@@ -2063,7 +2555,8 @@ async def measure_garment(
 
     if not physical_measurement_valid:
         tracking_data = update_tracker_non_ready(
-            "PARTIAL_GARMENT"
+            "PARTIAL_GARMENT",
+            scene_signature=scene_signature,
         )
         return make_response(
             state="PARTIAL_GARMENT",
@@ -2090,7 +2583,28 @@ async def measure_garment(
         width_cm=width_cm,
         length_cm=height_cm,
         confidence=confidence,
+        scene_signature=scene_signature,
     )
+
+    # Display the rolling/stored median instead of a noisy single-frame
+    # measurement. Once counted, the values remain locked until the garment
+    # is physically removed from the table.
+    display_measurement = tracking_data.get("display_measurement")
+    if (
+        display_measurement is not None
+        and display_measurement["garment_type"] == garment_type
+    ):
+        width_cm = float(display_measurement["width_cm"])
+        height_cm = float(display_measurement["length_cm"])
+        confidence = float(display_measurement["confidence"])
+        size = str(display_measurement["size"])
+        width_pixels = width_cm * pixels_per_cm
+        height_pixels = height_cm * pixels_per_cm
+        _, size_distance = classify_size(
+            garment_type,
+            width_cm,
+            height_cm,
+        )
 
     annotated_image = (
         create_annotated_result(
