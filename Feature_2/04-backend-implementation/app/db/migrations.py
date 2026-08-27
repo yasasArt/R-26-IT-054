@@ -1,5 +1,3 @@
-"""Small, explicit migration runner for the embedded SQLite database."""
-
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path

@@ -3,6 +3,7 @@ import sqlite3
 from app.db.transaction import transaction
 from app.errors import ConflictError, ResourceNotFoundError
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.session_repository import SessionRepository
 from app.schemas.employee import EmployeeCreate, EmployeeResponse, EmployeeUpdate
 from app.time_utils import utc_now_iso
 
@@ -46,15 +47,22 @@ class EmployeeService:
         ]
 
     def update(self, employee_id: int, payload: EmployeeUpdate) -> EmployeeResponse:
-        if self.repository.find_by_id(employee_id) is None:
-            raise ResourceNotFoundError(f"Employee {employee_id} was not found")
-
         changes = payload.model_dump(exclude_unset=True)
         if "is_active" in changes:
             changes["is_active"] = int(bool(changes["is_active"]))
         changes["updated_at"] = utc_now_iso()
 
         with transaction(self.connection):
+            if self.repository.find_by_id(employee_id) is None:
+                raise ResourceNotFoundError(f"Employee {employee_id} was not found")
+            if changes.get("is_active") == 0:
+                active = SessionRepository(self.connection).find_active_for_employee(
+                    employee_id
+                )
+                if active is not None:
+                    raise ConflictError(
+                        "An employee with an active session cannot be deactivated"
+                    )
             record = self.repository.update(employee_id, changes)
 
         return EmployeeResponse.model_validate(record)

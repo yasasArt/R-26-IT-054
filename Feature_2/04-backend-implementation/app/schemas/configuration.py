@@ -1,9 +1,16 @@
+"""Device-configuration request and response contracts."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class DeviceConfigurationUpdate(BaseModel):
+    """Editable device selections.
+
+    Tested/connected flags are intentionally absent. Later trusted camera and
+    Bluetooth handlers will update those values after physical verification.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
