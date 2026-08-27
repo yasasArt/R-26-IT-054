@@ -17,3 +17,5 @@ Feature_2/03-yolo-workstation-validation/yolov8n.pt
 Feature_2/04-backend-implementation/.venv
 Feature_2/04-backend-implementation/garment_counter_backend.egg-info
 Feature_2/04-backend-implementation/data
+Feature_2/04-backend-implementation/build
+Feature_2/04-backend-implementation/models

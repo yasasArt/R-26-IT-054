@@ -1,7 +1,6 @@
-"""Top-level versioned API router."""
-
 from fastapi import APIRouter
 
+from app.api.routes.analytics import router as analytics_router
 from app.api.routes.configuration import router as configuration_router
 from app.api.routes.employees import router as employees_router
 from app.api.routes.health import router as health_router
@@ -16,3 +15,4 @@ api_router.include_router(configuration_router)
 api_router.include_router(sessions_router)
 api_router.include_router(piece_events_router)
 api_router.include_router(iot_events_router)
+api_router.include_router(analytics_router)

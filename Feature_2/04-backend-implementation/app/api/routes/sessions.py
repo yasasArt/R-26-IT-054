@@ -1,16 +1,16 @@
-"""Production-session lifecycle endpoints."""
-
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
 from app.api.dependencies import DatabaseDependency
+from app.schemas.analytics import SessionHistoryDeleteResponse
 from app.schemas.session import (
     SessionCreate,
     SessionMode,
     SessionReadinessResponse,
     SessionResponse,
 )
+from app.services.analytics_service import AnalyticsService
 from app.services.session_service import SessionService
 
 router = APIRouter(prefix="/sessions", tags=["Production sessions"])
@@ -56,3 +56,11 @@ def complete_session(
     connection: DatabaseDependency,
 ) -> SessionResponse:
     return SessionService(connection).complete(session_id)
+
+
+@router.delete("/{session_id}", response_model=SessionHistoryDeleteResponse)
+def delete_session_history(
+    session_id: int,
+    connection: DatabaseDependency,
+) -> SessionHistoryDeleteResponse:
+    return AnalyticsService(connection).delete_session_history(session_id)
