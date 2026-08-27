@@ -71,11 +71,12 @@ MAXIMUM_MASK_AREA_RATIO = 0.50
 
 INFERENCE_IMAGE_SIZE = 640
 
-# Automatic garment lifecycle settings. At a 250 ms frontend scan interval,
-# three stable frames take about 0.75 seconds. Three scene-verified empty
-# frames re-arm the next garment quickly; raw YOLO misses alone are not enough.
+# Automatic garment lifecycle settings. At a 200 ms frontend scan interval,
+# three stable frames confirm a measurement. Two consecutive scene-verified
+# removal frames re-arm the next item, including another garment with exactly
+# the same type, colour and size.
 STABLE_FRAMES_REQUIRED = 3
-EMPTY_FRAMES_TO_REARM = 3
+EMPTY_FRAMES_TO_REARM = 2
 MAX_STABLE_WIDTH_CHANGE_CM = 1.5
 MAX_STABLE_LENGTH_CHANGE_CM = 2.0
 
@@ -83,7 +84,7 @@ MAX_STABLE_LENGTH_CHANGE_CM = 2.0
 # scene must also be visibly different from the scene that was counted.
 # This prevents one stationary garment being counted again after temporary
 # segmentation failures.
-MINIMUM_REMOVAL_SCENE_DIFFERENCE = 0.16
+MINIMUM_REMOVAL_SCENE_DIFFERENCE = 0.10
 
 # These margins are used only to reject obviously incomplete T-shirt masks.
 # The actual size label is still obtained from size_chart.json.
@@ -2307,6 +2308,8 @@ def health():
         ],
         "inference_image_size": INFERENCE_IMAGE_SIZE,
         "stable_frames_required": STABLE_FRAMES_REQUIRED,
+        "empty_frames_to_rearm": EMPTY_FRAMES_TO_REARM,
+        "removal_scene_difference": MINIMUM_REMOVAL_SCENE_DIFFERENCE,
     }
 
 
