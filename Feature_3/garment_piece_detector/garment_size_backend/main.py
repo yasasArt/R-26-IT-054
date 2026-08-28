@@ -10,6 +10,17 @@ from threading import Lock
 import cv2
 import numpy as np
 import torch
+
+#adding database imports add parth
+from database import (
+    DATABASE_PATH,
+    get_all_measurements,
+    get_current_session_data,
+    initialize_database,
+    save_garment_measurement,
+    start_new_session,
+)
+
 from fastapi import (
     FastAPI,
     File,
@@ -201,6 +212,29 @@ TRACKER = {
     "counts": empty_count_table(),
     "history": deque(maxlen=50),
 }
+
+
+# Create the SQLite tables when the backend starts. If a current counting
+# session already exists, restore its totals and recent history so a backend
+# restart does not erase the dashboard data.
+initialize_database()
+
+
+def restore_tracker_from_database() -> None:
+    saved_data = get_current_session_data(
+        history_limit=50,
+    )
+
+    TRACKER["counts"] = saved_data["counts"]
+    TRACKER["history"].clear()
+
+    # Database history is newest-first. appendleft() also inserts at the
+    # newest position, therefore restore from oldest to newest.
+    for record in reversed(saved_data["history"]):
+        TRACKER["history"].appendleft(record)
+
+
+restore_tracker_from_database()
 
 
 def calculate_scene_signature(image: np.ndarray) -> dict:
@@ -514,17 +548,17 @@ def update_tracker_ready(
             TRACKER["tracking_state"] = "SIZE_UNKNOWN"
             return tracker_snapshot()
 
+        # Persist first. The in-memory count is changed only after SQLite
+        # commits successfully, preventing the UI and database from diverging.
+        record = save_garment_measurement(
+            garment_type=garment_type,
+            size=count_size,
+            width_cm=final_width,
+            length_cm=final_length,
+            confidence=final_confidence,
+        )
+
         TRACKER["counts"][garment_type][count_size] += 1
-
-        record = {
-            "id": datetime.now(timezone.utc).isoformat(),
-            "garment_type": garment_type,
-            "size": count_size,
-            "width_cm": round(final_width, 2),
-            "length_cm": round(final_length, 2),
-            "confidence": round(final_confidence, 4),
-        }
-
         TRACKER["history"].appendleft(record)
         TRACKER["current_garment_counted"] = True
         TRACKER["last_counted_scene_signature"] = scene_signature
@@ -2306,6 +2340,8 @@ def health():
         "stable_frames_required": STABLE_FRAMES_REQUIRED,
         "empty_frames_to_rearm": EMPTY_FRAMES_TO_REARM,
         "removal_scene_difference": MINIMUM_REMOVAL_SCENE_DIFFERENCE,
+        "database": "sqlite",
+        "database_path": str(DATABASE_PATH),
     }
 
 
@@ -2316,9 +2352,26 @@ def get_counts():
         return tracker_snapshot()
 
 
+@app.get("/measurements")
+def get_measurements(
+    limit: int = 100,
+):
+    """Return persistent garment records from all counting sessions."""
+    return {
+        "measurements": get_all_measurements(
+            limit=limit,
+        )
+    }
+
+
 @app.post("/counts/reset")
 def reset_counts():
-    """Start a new counting session without restarting the API."""
+    """
+    Finish the current database session and start a new counting session.
+    Previous measurements remain available in SQLite.
+    """
+    start_new_session()
+
     with TRACKER_LOCK:
         TRACKER["tracking_state"] = "EMPTY"
         TRACKER["stable_samples"].clear()
