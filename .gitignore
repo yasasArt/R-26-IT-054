@@ -27,6 +27,7 @@ Feature_3/01_video_annotation/dataset_v2_fixed_height/extracted_frames
 Feature_3/garment_piece_detector/dataset_v2_fixed_height/selected_best_frames
 Feature_3/02_model_development/best_frame_selector
 Feature_3/02_model_development/best_frame_selector
+*__pycache__/
 
 
 Feature_3/garment_size_frontend
