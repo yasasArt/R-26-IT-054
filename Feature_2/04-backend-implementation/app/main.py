@@ -13,6 +13,7 @@ from app.vision.model_registry import ModelRegistry
 
 
 def configure_logging(settings: Settings) -> None:
+    """Configure readable process logging once during application creation."""
 
     logging.basicConfig(
         level=getattr(logging, settings.log_level),
@@ -32,13 +33,20 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         lifespan=application_lifespan,
         docs_url="/docs" if resolved_settings.environment != "production" else None,
         redoc_url="/redoc" if resolved_settings.environment != "production" else None,
+        openapi_url=(
+            "/openapi.json"
+            if resolved_settings.environment != "production"
+            else None
+        ),
     )
 
+    # Lifespan and request dependencies read the same application-owned object.
     application.state.settings = resolved_settings
     application.state.service_ready = False
     application.state.database_ready = False
     application.state.schema_version = 0
     application.state.models_ready = False
+    application.state.security_ready = resolved_settings.api_token is not None
     application.state.model_registry = ModelRegistry(resolved_settings)
     application.state.vision_runtime = None
     register_error_handlers(application)

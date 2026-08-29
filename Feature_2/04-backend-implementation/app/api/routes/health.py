@@ -8,8 +8,12 @@ router = APIRouter(tags=["Health"])
 
 
 def build_health_response(request: Request, settings: SettingsDependency) -> HealthResponse:
+    """Build health information from live application state."""
 
-    ready = bool(getattr(request.app.state, "service_ready", False))
+    ready = bool(
+        getattr(request.app.state, "service_ready", False)
+        and getattr(request.app.state, "security_ready", False)
+    )
     return HealthResponse(
         status="ok" if ready else "starting",
         service=settings.application_name,
@@ -28,6 +32,8 @@ async def health_check(
     request: Request,
     settings: SettingsDependency,
 ) -> HealthResponse:
+    """Return a small response used by Electron during backend startup."""
+
     return build_health_response(request, settings)
 
 
@@ -37,6 +43,7 @@ async def health_check(
     summary="Check SQLite configuration and schema version",
 )
 def database_health(connection: DatabaseDependency) -> DatabaseHealthResponse:
+    """Verify important per-connection PRAGMAs and migration state."""
 
     foreign_keys = bool(connection.execute("PRAGMA foreign_keys").fetchone()[0])
     journal_mode = str(connection.execute("PRAGMA journal_mode").fetchone()[0])

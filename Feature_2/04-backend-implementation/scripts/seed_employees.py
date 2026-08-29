@@ -1,3 +1,5 @@
+"""Idempotently add sample employees for local development."""
+
 from app.config import get_settings
 from app.db.connection import connect_database
 from app.db.migrations import apply_migrations

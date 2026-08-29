@@ -1,9 +1,19 @@
+import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict # type: ignore
+
+
+def default_models_dir() -> Path:
+    """Use PyInstaller's extraction directory when running a bundled binary."""
+
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    if getattr(sys, "frozen", False) and bundle_root:
+        return Path(bundle_root) / "models"
+    return Path("./models")
 
 
 class Settings(BaseSettings):
@@ -18,7 +28,7 @@ class Settings(BaseSettings):
 
     app_data_dir: Path = Path("./data")
     database_path: Path | None = None
-    models_dir: Path = Path("./models")
+    models_dir: Path = Field(default_factory=default_models_dir)
     minimum_piece_gap_seconds: float = Field(default=1.0, ge=0.1, le=60.0)
 
     load_models_on_startup: bool = True
@@ -53,9 +63,7 @@ class Settings(BaseSettings):
         le=20 * 1024 * 1024 * 1024,
     )
 
-    # Authentication is implemented in Phase 11. We define the value now so
-    # Electron can eventually provide a private token without changing Settings.
-    api_token: str | None = None
+    api_token: SecretStr | None = None
 
     model_config = SettingsConfigDict(
         env_prefix="GARMENT_COUNTER_",
@@ -63,10 +71,26 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        hide_input_in_errors=True,
     )
+
+    @field_validator("api_token")
+    @classmethod
+    def validate_api_token(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is None:
+            return None
+        length = len(value.get_secret_value())
+        if length < 32:
+            raise ValueError("API token must contain at least 32 characters")
+        if length > 512:
+            raise ValueError("API token cannot exceed 512 characters")
+        return value
 
     @model_validator(mode="after")
     def normalize_paths(self) -> "Settings":
+
+        if self.environment == "production" and self.host != "127.0.0.1":
+            raise ValueError("Production backend must bind to 127.0.0.1")
 
         self.app_data_dir = self.app_data_dir.expanduser().resolve()
         self.models_dir = self.models_dir.expanduser().resolve()

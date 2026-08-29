@@ -25,6 +25,7 @@ async def application_lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.service_ready = False
     app.state.database_ready = False
     app.state.models_ready = False
+    app.state.security_ready = settings.api_token is not None
 
     assert settings.database_path is not None
     schema_version = initialize_database(settings.database_path)
@@ -55,4 +56,5 @@ async def application_lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.service_ready = False
         app.state.database_ready = False
         app.state.models_ready = False
+        app.state.security_ready = False
         logger.info("Garment Counter backend stopped")

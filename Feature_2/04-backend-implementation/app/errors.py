@@ -1,10 +1,16 @@
+from typing import ClassVar
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 
 class ApplicationError(Exception):
+    """Base class for expected business and resource errors."""
+
     status_code = 500
     error_code = "APPLICATION_ERROR"
+
+    headers: ClassVar[dict[str, str] | None] = None
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
@@ -26,12 +32,25 @@ class ForbiddenError(ApplicationError):
     error_code = "FORBIDDEN"
 
 
+class UnauthorizedError(ApplicationError):
+    status_code = 401
+    error_code = "UNAUTHORIZED"
+    headers: ClassVar[dict[str, str]] = {"WWW-Authenticate": "Bearer"}
+
+
+class ServiceUnavailableError(ApplicationError):
+    status_code = 503
+    error_code = "SERVICE_UNAVAILABLE"
+
+
 class InvalidOperationError(ApplicationError):
     status_code = 422
     error_code = "INVALID_OPERATION"
 
 
 def register_error_handlers(application: FastAPI) -> None:
+    """Register one response contract for expected application failures."""
+
     @application.exception_handler(ApplicationError)
     async def handle_application_error(
         request: Request,
@@ -41,4 +60,5 @@ def register_error_handlers(application: FastAPI) -> None:
         return JSONResponse(
             status_code=error.status_code,
             content={"detail": error.message, "code": error.error_code},
+            headers=error.headers,
         )

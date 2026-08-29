@@ -1,0 +1,14 @@
+{
+  "name": "garment-counter-desktop-phase-11",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:security": "tsc -p tsconfig.test.json && node --test dist-test/tests/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "electron": "^37.0.0",
+    "typescript": "^5.9.0"
+  }
+}

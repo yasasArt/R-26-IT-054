@@ -158,3 +158,24 @@ def preview_stream(request: Request) -> StreamingResponse:
         media_type="multipart/x-mixed-replace; boundary=frame",
         headers={"Cache-Control": "no-store"},
     )
+
+
+@router.get(
+    "/preview/frame",
+    summary="Read one authenticated preview frame through Electron IPC",
+    responses={200: {"content": {"image/jpeg": {}}}},
+)
+def preview_frame(request: Request) -> Response:
+    runtime = get_runtime(request)
+    current = runtime.status
+    if current.state not in VisionRuntime.ACTIVE_STATES:
+        raise ConflictError("Vision preview is not running")
+    runtime.publisher.mark_preview_attached()
+    jpeg = runtime.publisher.latest_jpeg()
+    if jpeg is None:
+        raise ConflictError("The first preview frame is not ready")
+    return Response(
+        content=jpeg,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "no-store"},
+    )

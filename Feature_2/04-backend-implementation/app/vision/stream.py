@@ -42,6 +42,7 @@ class FramePublisher:
         self._latest: bytes | None = None
         self._sequence = 0
         self._subscribers = 0
+        self._preview_attached = False
         self._closed = False
 
     @property
@@ -54,6 +55,11 @@ class FramePublisher:
         with self._condition:
             return self._latest is not None
 
+    @property
+    def preview_attached(self) -> bool:
+        with self._condition:
+            return self._preview_attached
+
     def reset(self) -> None:
         with self._condition:
             if self._subscribers:
@@ -62,6 +68,7 @@ class FramePublisher:
                 )
             self._latest = None
             self._sequence = 0
+            self._preview_attached = False
             self._closed = False
             self._condition.notify_all()
 
@@ -79,6 +86,31 @@ class FramePublisher:
             self._condition.notify_all()
             return self._sequence
 
+    def latest_jpeg(self) -> bytes | None:
+        """Return a copy of the current frame for authenticated IPC polling."""
+
+        with self._condition:
+            return bytes(self._latest) if self._latest is not None else None
+
+    def mark_preview_attached(self) -> None:
+        """Record that a trusted preview consumer displayed or requested a frame."""
+
+        with self._condition:
+            if self._closed:
+                raise RuntimeError("Preview stream is closed")
+            self._preview_attached = True
+            self._condition.notify_all()
+
+    def wait_for_attachment(self, timeout: float) -> bool:
+        deadline = time.monotonic() + timeout
+        with self._condition:
+            while not self._closed and not self._preview_attached:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                self._condition.wait(remaining)
+            return not self._closed and self._preview_attached
+
     def wait_for_subscriber(self, timeout: float) -> bool:
         deadline = time.monotonic() + timeout
         with self._condition:
@@ -95,6 +127,7 @@ class FramePublisher:
             if self._closed:
                 raise RuntimeError("Preview stream is closed")
             self._subscribers += 1
+            self._preview_attached = True
             self._condition.notify_all()
         try:
             yield
