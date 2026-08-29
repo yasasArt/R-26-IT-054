@@ -1,3 +1,5 @@
+"""Centralized, fault-isolated model discovery and loading."""
+
 from __future__ import annotations
 
 import json
