@@ -62,6 +62,10 @@ def _migrate(conn: sqlite3.Connection):
         # exactly the old behaviour this column replaces.
         conn.execute("ALTER TABLE settings ADD COLUMN count_since TEXT")
 
+    # The adjustable detection-zone feature (and its roi_settings table) was
+    # removed - drop the table on any database that already created it.
+    conn.execute("DROP TABLE IF EXISTS roi_settings")
+
 
 def init_db():
     with get_connection() as conn:

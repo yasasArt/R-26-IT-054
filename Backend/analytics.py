@@ -24,6 +24,17 @@ def get_settings() -> dict:
     settings = dict(row)
     settings["breaks"] = json.loads(settings.pop("breaks_json"))
     settings["category_targets"] = json.loads(settings.pop("category_targets_json") or "{}")
+
+    # count_since is the precise moment "Total Packed" and the current-rate
+    # calculations start counting from - distinct from start_date, which
+    # only marks the beginning of the schedule window (due_date - start_date
+    # = days allocated). Saving a new target moves both to now; completing a
+    # target and auto-resetting only moves count_since, since the schedule
+    # window itself hasn't changed. Falls back to start_date-at-midnight for
+    # rows written before this column existed, or if it's ever cleared.
+    start_date = date.fromisoformat(settings["start_date"])
+    settings["count_since"] = settings["count_since"] or datetime.combine(start_date, time.min).isoformat()
+
     return settings
 
 
@@ -39,9 +50,15 @@ def fixed_break_hours_per_day(settings: dict) -> float:
     return total_minutes / 60.0
 
 
-def downtime_hours_for_day(day: date) -> float:
+def downtime_hours_for_day(day: date, until: datetime = None) -> float:
+    """Downtime overlapping `day`, optionally capped at `until` instead of
+    the full calendar day - used for today's *elapsed-so-far* window so a
+    breakdown scheduled later this afternoon doesn't reduce hours that
+    haven't happened yet."""
     day_start = datetime.combine(day, time.min)
     day_end = day_start + timedelta(days=1)
+    if until is not None:
+        day_end = min(day_end, until)
 
     with get_connection() as conn:
         rows = conn.execute(
@@ -59,12 +76,38 @@ def downtime_hours_for_day(day: date) -> float:
     return total_seconds / 3600.0
 
 
-def effective_hours_for_day(day: date, settings: dict) -> float:
+def effective_hours_for_day(day: date, settings: dict, now: datetime = None) -> float:
     """Scheduled shift hours, minus fixed tea/lunch breaks, minus any logged
-    breakdown / power-failure downtime that overlaps that calendar day."""
+    breakdown/power-failure downtime that overlaps that calendar day.
+
+    For TODAY specifically, this is capped to elapsed time since shift start
+    (and only counts breaks/downtime that have actually started by now) -
+    using the *full* planned day as the denominator for a day that isn't
+    over yet was the reason Efficiency looked like it was constantly
+    drifting: early in a shift the real pace divided by a full day's hours
+    reads far too low, then climbs back up as the count "catches up" to
+    what a finished day would have implied, all without the actual pace
+    having changed. Past days are unaffected - they use the full scheduled
+    day, exactly as before."""
+    now = now or datetime.now()
     scheduled = scheduled_hours_per_day(settings)
     breaks = fixed_break_hours_per_day(settings)
-    downtime = downtime_hours_for_day(day)
+    downtime_until = None
+
+    if day == now.date():
+        shift_start = datetime.combine(day, _parse_hhmm(settings["work_start_time"]))
+        elapsed_hours = max(0.0, (now - shift_start).total_seconds() / 3600.0)
+        scheduled = min(scheduled, elapsed_hours)
+
+        elapsed_break_minutes = 0.0
+        for b in settings.get("breaks", []):
+            break_start = datetime.combine(day, _parse_hhmm(b["start_time"]))
+            if now > break_start:
+                elapsed_break_minutes += min(b["duration_minutes"], (now - break_start).total_seconds() / 60.0)
+        breaks = elapsed_break_minutes / 60.0
+        downtime_until = now
+
+    downtime = downtime_hours_for_day(day, until=downtime_until)
     return max(0.0, scheduled - breaks - downtime)
 
 
@@ -84,9 +127,9 @@ def daily_counts() -> List[Dict]:
     return [{"date": row["date"], "count": row["count"]} for row in rows]
 
 
-def _daily_counts_since(start_date: date, style_name: str = None) -> List[Dict]:
+def _daily_counts_since(count_since: str, style_name: str = None) -> List[Dict]:
     query = "SELECT substr(timestamp, 1, 10) AS date, COUNT(*) AS count FROM garments WHERE timestamp >= :since"
-    params = {"since": datetime.combine(start_date, time.min).isoformat()}
+    params = {"since": count_since}
     if style_name:
         query += " AND style_name = :style_name"
         params["style_name"] = style_name
@@ -97,14 +140,15 @@ def _daily_counts_since(start_date: date, style_name: str = None) -> List[Dict]:
     return [{"date": row["date"], "count": row["count"]} for row in rows]
 
 
-def _daily_rates_since(start_date: date, settings: dict, style_name: str = None) -> List[Dict]:
-    """Pieces-per-effective-hour for every day since start_date that has at
-    least one scan - scoped to the current target's window (and optionally
+def _daily_rates_since(count_since: str, settings: dict, style_name: str = None) -> List[Dict]:
+    """Pieces-per-effective-hour for every day since count_since that has at
+    least one scan - scoped to the current counting cycle (and optionally
     one garment category), not all-time history. This is what makes
     'current pace' and therefore efficiency read as 0 right after a new
-    target is set, instead of carrying over the previous target's rate."""
+    target is set or a completed target auto-resets, instead of carrying
+    over the previous cycle's rate."""
     rates = []
-    for row in _daily_counts_since(start_date, style_name):
+    for row in _daily_counts_since(count_since, style_name):
         day = datetime.strptime(row["date"], "%Y-%m-%d").date()
         hours = effective_hours_for_day(day, settings)
         rate = (row["count"] / hours) if hours > 0 else 0.0
@@ -119,26 +163,71 @@ def _daily_rates_since(start_date: date, settings: dict, style_name: str = None)
     return rates
 
 
+# Below this, a day's effective_hours is too small for its rate to mean
+# anything - e.g. 1 piece packed 3 minutes into a shift reads as a 20
+# pcs/hr pace. weighted_recent_rate excludes days under this so a fresh
+# shift's first few minutes don't feed a wildly optimistic number into
+# Projected Delivery before there's actually enough elapsed time to average
+# out.
+MIN_RELIABLE_HOURS = 0.5
+
+
 def weighted_recent_rate(rates: List[Dict], window: int = 3) -> float:
     """Average pieces/effective-hour over the most recent days that actually
-    had working hours, so a day fully wiped out by downtime doesn't skew it."""
-    recent = [r for r in rates if r["effective_hours"] > 0][-window:]
+    had a reliable amount of working hours, so neither a day fully wiped
+    out by downtime nor a day that's barely started yet can skew it."""
+    recent = [r for r in rates if r["effective_hours"] >= MIN_RELIABLE_HOURS][-window:]
     if not recent:
         return 0.0
     return sum(r["rate_per_hour"] for r in recent) / len(recent)
 
 
-def _build_summary(target: int, total_packed: int, rates: List[Dict], settings: dict, start_date: date, due_date: date) -> dict:
+def _find_completion_timestamp(count_since: str, target: int, style_name: str = None) -> str:
+    """The exact timestamp of the garment that pushed the count up to
+    target - the Nth matching row since count_since, computed straight from
+    existing data rather than stored separately, so there's no extra
+    mutable 'when did we complete' state to keep in sync or reset. This is
+    what freezing the counter and reporting how long the order actually
+    took are both built on."""
+    if target <= 0:
+        return None
+    query = "SELECT timestamp FROM garments WHERE timestamp >= :since"
+    params: dict = {"since": count_since}
+    if style_name:
+        query += " AND style_name = :style_name"
+        params["style_name"] = style_name
+    query += " ORDER BY timestamp ASC LIMIT 1 OFFSET :offset"
+    params["offset"] = target - 1
+
+    with get_connection() as conn:
+        row = conn.execute(query, params).fetchone()
+    return row["timestamp"] if row else None
+
+
+def _build_summary(
+    target: int,
+    raw_packed: int,
+    rates: List[Dict],
+    settings: dict,
+    start_date: date,
+    due_date: date,
+    count_since: str,
+    style_name: str = None,
+) -> dict:
     """The full remaining/ETA/efficiency/OT bundle for one target - the
     overall total and each of the four per-category targets all go through
     this exact same math, just with a different target figure, packed
     count, and rate history (already pre-scoped to the right category by
-    the caller)."""
+    the caller). raw_packed is the true, uncapped count - total_packed
+    freezes at target once reached (garments detected afterward are still
+    saved to the database for History Log/Analytics, they just stop being
+    credited toward this target)."""
     current_rate_per_hour = weighted_recent_rate(rates, window=3)
     planned_daily_hours = max(0.0, scheduled_hours_per_day(settings) - fixed_break_hours_per_day(settings))
 
+    is_completed = target > 0 and raw_packed >= target
+    total_packed = min(raw_packed, target) if target > 0 else raw_packed
     remaining = max(0, target - total_packed)
-    is_completed = target > 0 and total_packed >= target
 
     total_days_allocated = max(1, (due_date - start_date).days)
     total_hours_allocated = total_days_allocated * planned_daily_hours
@@ -171,9 +260,28 @@ def _build_summary(target: int, total_packed: int, rates: List[Dict], settings: 
             extra_hours_total = max(0.0, hours_needed - hours_available_until_due)
             extra_hours_per_day = extra_hours_total / remaining_days_until_due
 
+    # Once completed, look up the exact moment it happened (the target-th
+    # garment's own timestamp) so the operator can see precisely how long
+    # the order actually took, and so any garments detected after that
+    # instant are visibly "extra" rather than silently inflating the count.
+    completed_at = None
+    elapsed_hours = None
+    elapsed_days = None
+    overrun = 0
+    if is_completed:
+        completed_at = _find_completion_timestamp(count_since, target, style_name)
+        if completed_at:
+            since_dt = datetime.fromisoformat(count_since)
+            completed_dt = datetime.fromisoformat(completed_at)
+            elapsed_hours = max(0.0, (completed_dt - since_dt).total_seconds() / 3600.0)
+            elapsed_days = max(1, (completed_dt.date() - since_dt.date()).days + 1)
+        overrun = max(0, raw_packed - target)
+
     return {
         "target_pieces": target,
         "total_packed": total_packed,
+        "raw_packed": raw_packed,
+        "overrun": overrun,
         "remaining": remaining,
         "is_completed": is_completed,
         "current_rate_per_hour": round(current_rate_per_hour, 2),
@@ -186,6 +294,11 @@ def _build_summary(target: int, total_packed: int, rates: List[Dict], settings: 
         "on_track": on_track,
         "delayed_days": delayed_days,
         "extra_hours_per_day": round(extra_hours_per_day, 2) if extra_hours_per_day is not None else None,
+        "total_days_allocated": total_days_allocated,
+        "total_hours_allocated": round(total_hours_allocated, 2),
+        "completed_at": completed_at,
+        "elapsed_hours": round(elapsed_hours, 2) if elapsed_hours is not None else None,
+        "elapsed_days": elapsed_days,
     }
 
 
@@ -193,27 +306,29 @@ def summary() -> dict:
     settings = get_settings()
     start_date = date.fromisoformat(settings["start_date"])
     due_date = date.fromisoformat(settings["due_date"])
+    count_since = settings["count_since"]
 
     with get_connection() as conn:
-        total_packed = conn.execute(
+        raw_packed = conn.execute(
             "SELECT COUNT(*) AS n FROM garments WHERE timestamp >= ?",
-            (datetime.combine(start_date, time.min).isoformat(),),
+            (count_since,),
         ).fetchone()["n"]
 
-    rates = _daily_rates_since(start_date, settings)
-    overall = _build_summary(settings["target_pieces"], total_packed, rates, settings, start_date, due_date)
+    rates = _daily_rates_since(count_since, settings)
+    overall = _build_summary(settings["target_pieces"], raw_packed, rates, settings, start_date, due_date, count_since)
 
     category_targets = settings.get("category_targets", {})
     categories = {}
     for category in CATEGORIES:
         with get_connection() as conn:
-            cat_packed = conn.execute(
+            cat_raw_packed = conn.execute(
                 "SELECT COUNT(*) AS n FROM garments WHERE timestamp >= ? AND style_name = ?",
-                (datetime.combine(start_date, time.min).isoformat(), category),
+                (count_since, category),
             ).fetchone()["n"]
-        cat_rates = _daily_rates_since(start_date, settings, style_name=category)
+        cat_rates = _daily_rates_since(count_since, settings, style_name=category)
         categories[category] = _build_summary(
-            category_targets.get(category, 0), cat_packed, cat_rates, settings, start_date, due_date
+            category_targets.get(category, 0), cat_raw_packed, cat_rates, settings, start_date, due_date,
+            count_since, style_name=category,
         )
 
     overall["categories"] = categories
@@ -263,14 +378,29 @@ def _predict_from_rates(rates: List[Dict], settings: dict) -> dict:
 
 def predict_next_day() -> dict:
     settings = get_settings()
-    start_date = date.fromisoformat(settings["start_date"])
+    count_since = settings["count_since"]
 
-    overall = _predict_from_rates(_daily_rates_since(start_date, settings), settings)
+    overall = _predict_from_rates(_daily_rates_since(count_since, settings), settings)
 
     categories = {}
     for category in CATEGORIES:
-        cat_rates = _daily_rates_since(start_date, settings, style_name=category)
+        cat_rates = _daily_rates_since(count_since, settings, style_name=category)
         categories[category] = _predict_from_rates(cat_rates, settings)
 
     overall["categories"] = categories
     return overall
+
+
+def reset_progress() -> dict:
+    """Bumps count_since to right now, without touching target_pieces,
+    category_targets, start_date, due_date, or breaks. Used when a target
+    is completed and the dashboard auto-resets for the next cycle - unlike
+    saving settings (which also treats the moment as the start of a new
+    schedule window), this only starts a fresh counting cycle inside the
+    *same* target/schedule the operator already configured. Every garment
+    record stays in the database untouched; only the pointer that decides
+    which of them count toward 'Total Packed' moves forward."""
+    now = datetime.now().isoformat()
+    with get_connection() as conn:
+        conn.execute("UPDATE settings SET count_since = ? WHERE id = 1", (now,))
+    return {"count_since": now}
