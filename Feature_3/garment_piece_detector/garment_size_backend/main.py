@@ -77,6 +77,8 @@ CAMERA_HEIGHT_CM = 100.0
 # consistency are checked below.
 INFERENCE_CONFIDENCE = 0.25
 MINIMUM_CONFIDENCE = 0.60
+SHIRT_INFERENCE_CONFIDENCE = 0.15
+SHIRT_MINIMUM_CONFIDENCE = 0.45
 MINIMUM_MASK_AREA_RATIO = 0.04
 MAXIMUM_MASK_AREA_RATIO = 0.50
 
@@ -87,6 +89,7 @@ INFERENCE_IMAGE_SIZE = 640
 # removal frames re-arm the next item, including another garment with exactly
 # the same type, colour and size.
 STABLE_FRAMES_REQUIRED = 3
+SHIRT_STABLE_FRAMES_REQUIRED = 5
 EMPTY_FRAMES_TO_REARM = 3
 MAX_STABLE_WIDTH_CHANGE_CM = 1.5
 MAX_STABLE_LENGTH_CHANGE_CM = 2.0
@@ -204,7 +207,10 @@ TRACKER_LOCK = Lock()
 TRACKER = {
     "tracking_state": "EMPTY",
     "stable_samples": deque(
-        maxlen=STABLE_FRAMES_REQUIRED
+        maxlen=max(
+            STABLE_FRAMES_REQUIRED,
+            SHIRT_STABLE_FRAMES_REQUIRED,
+        )
     ),
     "empty_frames": 0,
     "current_garment_counted": False,
@@ -290,6 +296,15 @@ def scene_signature_difference(
     return colour_difference * 0.70 + edge_difference * 0.30
 
 
+def stable_frames_required_for(garment_type: str | None) -> int:
+    """Use a longer stability window for closely spaced shirt sizes."""
+    return (
+        SHIRT_STABLE_FRAMES_REQUIRED
+        if garment_type == "shirt"
+        else STABLE_FRAMES_REQUIRED
+    )
+
+
 def tracker_snapshot(
     *,
     counted_now: bool = False,
@@ -351,8 +366,16 @@ def tracker_snapshot(
         "stable_count": len(
             TRACKER["stable_samples"]
         ),
-        "stable_required": (
-            STABLE_FRAMES_REQUIRED
+        "stable_required": stable_frames_required_for(
+            (
+                TRACKER["stable_samples"][-1]["garment_type"]
+                if TRACKER["stable_samples"]
+                else (
+                    TRACKER["history"][0]["garment_type"]
+                    if TRACKER["current_garment_counted"] and TRACKER["history"]
+                    else None
+                )
+            )
         ),
         "counted_now": counted_now,
         "ready_for_next_garment": not (
@@ -443,19 +466,28 @@ def stable_samples_are_consistent(
     previous: dict,
     current: dict,
 ) -> bool:
+    width_limit = (
+        2.0
+        if current["garment_type"] == "shirt"
+        else MAX_STABLE_WIDTH_CHANGE_CM
+    )
+    length_limit = (
+        2.5
+        if current["garment_type"] == "shirt"
+        else MAX_STABLE_LENGTH_CHANGE_CM
+    )
+
     return (
         previous["garment_type"]
         == current["garment_type"]
-        and previous["size"]
-        == current["size"]
         and abs(
             previous["width_cm"]
             - current["width_cm"]
-        ) <= MAX_STABLE_WIDTH_CHANGE_CM
+        ) <= width_limit
         and abs(
             previous["length_cm"]
             - current["length_cm"]
-        ) <= MAX_STABLE_LENGTH_CHANGE_CM
+        ) <= length_limit
     )
 
 
@@ -510,7 +542,11 @@ def update_tracker_ready(
         samples.append(current_sample)
         TRACKER["tracking_state"] = "STABILIZING"
 
-        if len(samples) < STABLE_FRAMES_REQUIRED:
+        required_samples = stable_frames_required_for(
+            garment_type,
+        )
+
+        if len(samples) < required_samples:
             return tracker_snapshot()
 
         widths = [
@@ -887,6 +923,7 @@ def prediction_has_mask(predictions) -> bool:
 def select_best_garment_mask(
     result,
     image_shape,
+    garment_type: str,
 ):
     image_height, image_width = (
         image_shape[:2]
@@ -954,10 +991,13 @@ def select_best_garment_mask(
             confidences[index]
         )
 
-        if (
-            confidence
-            < MINIMUM_CONFIDENCE
-        ):
+        minimum_confidence = (
+            SHIRT_MINIMUM_CONFIDENCE
+            if garment_type == "shirt"
+            else MINIMUM_CONFIDENCE
+        )
+
+        if confidence < minimum_confidence:
             confidence_rejections += 1
             continue
 
@@ -2139,10 +2179,19 @@ def classify_size(
             )
         )
 
-        distance = math.sqrt(
-            width_difference ** 2
-            + height_difference ** 2
-        )
+        if garment_type == "shirt":
+            # Chest width is the stronger discriminator for adjacent shirt
+            # sizes. A weighted distance prevents small collar/hem mask noise
+            # from switching a stable S shirt to M (or the reverse).
+            distance = math.sqrt(
+                0.70 * width_difference ** 2
+                + 0.30 * height_difference ** 2
+            )
+        else:
+            distance = math.sqrt(
+                width_difference ** 2
+                + height_difference ** 2
+            )
 
         scored_sizes.append(
             (
@@ -2449,11 +2498,16 @@ async def measure_garment(
 
     detection_zone, _ = extract_detection_zone(image)
     scene_signature = calculate_scene_signature(detection_zone)
+    prediction_confidence = (
+        SHIRT_INFERENCE_CONFIDENCE
+        if garment_type == "shirt"
+        else INFERENCE_CONFIDENCE
+    )
 
     predictions = model.predict(
         source=detection_zone,
         imgsz=INFERENCE_IMAGE_SIZE,
-        conf=INFERENCE_CONFIDENCE,
+        conf=prediction_confidence,
         iou=0.45,
         max_det=3,
         agnostic_nms=True,
@@ -2474,13 +2528,14 @@ async def measure_garment(
         predictions = model.predict(
             source=enhanced_zone,
             imgsz=INFERENCE_IMAGE_SIZE,
-            conf=INFERENCE_CONFIDENCE,
+            conf=prediction_confidence,
             iou=0.45,
             max_det=3,
             agnostic_nms=True,
             device=DEVICE,
             half=torch.cuda.is_available(),
             retina_masks=True,
+            augment=(garment_type == "shirt"),
             verbose=False,
         )
         inference_variant = "contrast_enhanced"
@@ -2511,6 +2566,7 @@ async def measure_garment(
     ) = select_best_garment_mask(
         result,
         detection_zone.shape,
+        garment_type,
     )
     
     if garment_mask is None:
