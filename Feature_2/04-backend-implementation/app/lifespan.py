@@ -3,24 +3,19 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime # type: ignore
 
 from fastapi import FastAPI
 
 from app.config import Settings
 from app.db.migrations import initialize_database
+from app.vision.model_registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def application_lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Prepare process resources and release them during shutdown.
-
-    Database initialization and model loading will be added to this lifecycle
-    in later phases. Keeping those responsibilities here prevents import-time
-    side effects and makes application tests easy to isolate.
-    """
 
     settings: Settings = app.state.settings
     settings.ensure_directories()
@@ -28,11 +23,18 @@ async def application_lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.started_at = datetime.now(UTC)
     app.state.service_ready = False
     app.state.database_ready = False
+    app.state.models_ready = False
 
     assert settings.database_path is not None
     schema_version = initialize_database(settings.database_path)
     app.state.schema_version = schema_version
     app.state.database_ready = True
+
+    model_registry = ModelRegistry(settings)
+    app.state.model_registry = model_registry
+    if settings.load_models_on_startup:
+        model_status = model_registry.load_all()
+        app.state.models_ready = model_status.ready
     app.state.service_ready = True
 
     logger.info(
@@ -45,6 +47,8 @@ async def application_lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        model_registry.unload()
         app.state.service_ready = False
         app.state.database_ready = False
+        app.state.models_ready = False
         logger.info("Garment Counter backend stopped")

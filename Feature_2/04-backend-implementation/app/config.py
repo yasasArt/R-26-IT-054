@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     models_dir: Path = Path("./models")
     minimum_piece_gap_seconds: float = Field(default=1.0, ge=0.1, le=60.0)
 
+    load_models_on_startup: bool = True
+    model_device: Literal["auto", "cpu", "cuda", "mps"] = "auto"
+    classifier_checkpoint_path: Path | None = None
+    label_mapping_path: Path | None = None
+    workstation_checkpoint_path: Path | None = None
+
+    # Authentication is implemented in Phase 11. We define the value now so
+    # Electron can eventually provide a private token without changing Settings.
     api_token: str | None = None
 
     model_config = SettingsConfigDict(
@@ -36,6 +44,31 @@ class Settings(BaseSettings):
 
         self.app_data_dir = self.app_data_dir.expanduser().resolve()
         self.models_dir = self.models_dir.expanduser().resolve()
+
+        if self.classifier_checkpoint_path is None:
+            self.classifier_checkpoint_path = (
+                self.models_dir / "final_idle_cycle" / "best_model.pt"
+            )
+        else:
+            self.classifier_checkpoint_path = (
+                self.classifier_checkpoint_path.expanduser().resolve()
+            )
+
+        if self.label_mapping_path is None:
+            self.label_mapping_path = (
+                self.models_dir / "final_idle_cycle" / "label_mapping.json"
+            )
+        else:
+            self.label_mapping_path = self.label_mapping_path.expanduser().resolve()
+
+        if self.workstation_checkpoint_path is None:
+            self.workstation_checkpoint_path = (
+                self.models_dir / "workstation_detector" / "best.pt"
+            )
+        else:
+            self.workstation_checkpoint_path = (
+                self.workstation_checkpoint_path.expanduser().resolve()
+            )
 
         if self.database_path is None:
             self.database_path = self.app_data_dir / "garment_counter.db"
@@ -59,5 +92,4 @@ def get_settings() -> Settings:
 
 
 def clear_settings_cache() -> None:
-    
     get_settings.cache_clear()
