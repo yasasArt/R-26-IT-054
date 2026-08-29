@@ -28,8 +28,8 @@ class SmoothedPrediction:
     @property
     def probabilities(self) -> dict[str, float]:
         return {
-            TemporalState.IDLE_SETUP.value: self.idle_probability, # type: ignore
-            TemporalState.SEWING.value: self.sewing_probability, # type: ignore
+            TemporalState.IDLE_SETUP.value: self.idle_probability,
+            TemporalState.SEWING.value: self.sewing_probability,
         }
 
 
@@ -60,8 +60,8 @@ class ProbabilitySmoother:
     ) -> tuple[float, float]:
         if isinstance(probabilities, Mapping):
             try:
-                idle = float(probabilities[TemporalState.IDLE_SETUP.value]) # type: ignore
-                sewing = float(probabilities[TemporalState.SEWING.value]) # type: ignore
+                idle = float(probabilities[TemporalState.IDLE_SETUP.value])
+                sewing = float(probabilities[TemporalState.SEWING.value])
             except (KeyError, TypeError, ValueError) as exc:
                 raise ValueError(
                     "Probability mapping must contain numeric IDLE_SETUP and SEWING values"

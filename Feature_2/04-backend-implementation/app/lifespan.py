@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from app.config import Settings
 from app.db.migrations import initialize_database
 from app.vision.model_registry import ModelRegistry
+from app.vision.vision_runtime import VisionRuntime
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,8 @@ async def application_lifespan(app: FastAPI) -> AsyncIterator[None]:
     if settings.load_models_on_startup:
         model_status = model_registry.load_all()
         app.state.models_ready = model_status.ready
+    vision_runtime = VisionRuntime(settings, model_registry)
+    app.state.vision_runtime = vision_runtime
     app.state.service_ready = True
 
     logger.info(
@@ -47,6 +50,7 @@ async def application_lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        vision_runtime.stop()
         model_registry.unload()
         app.state.service_ready = False
         app.state.database_ready = False

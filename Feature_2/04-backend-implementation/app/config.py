@@ -1,19 +1,12 @@
-"""Application configuration loaded from defaults and environment variables."""
-
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict # type: ignore
 
 
 class Settings(BaseSettings):
-    """Typed settings used by FastAPI and, later, the Electron sidecar manager.
-
-    Environment variables use the ``GARMENT_COUNTER_`` prefix. For example,
-    ``GARMENT_COUNTER_PORT=8123`` overrides the default API port.
-    """
 
     application_name: str = "Garment Counter Backend"
     application_version: str = "1.0.0"
@@ -41,6 +34,24 @@ class Settings(BaseSettings):
     vision_minimum_sewing_seconds: float = Field(default=1.0, gt=0.0, le=600.0)
     vision_minimum_idle_seconds: float = Field(default=0.5, ge=0.0, le=60.0)
     vision_cooldown_seconds: float = Field(default=1.5, ge=0.0, le=60.0)
+    vision_clip_seconds: float = Field(default=1.5, gt=0.0, le=10.0)
+    vision_inference_interval_seconds: float = Field(default=0.3, gt=0.0, le=10.0)
+    workstation_initial_confirmations: int = Field(default=3, ge=1, le=20)
+    workstation_initial_check_interval_seconds: float = Field(
+        default=0.5, ge=0.0, le=30.0
+    )
+    workstation_recheck_interval_seconds: float = Field(
+        default=5.0, gt=0.0, le=300.0
+    )
+    workstation_allowed_failed_rechecks: int = Field(default=2, ge=0, le=20)
+    vision_preview_wait_seconds: float = Field(default=30.0, gt=0.0, le=300.0)
+    vision_preview_jpeg_quality: int = Field(default=80, ge=30, le=100)
+    vision_video_realtime_playback: bool = True
+    vision_upload_max_bytes: int = Field(
+        default=2 * 1024 * 1024 * 1024,
+        ge=1024,
+        le=20 * 1024 * 1024 * 1024,
+    )
 
     # Authentication is implemented in Phase 11. We define the value now so
     # Electron can eventually provide a private token without changing Settings.
@@ -56,12 +67,6 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def normalize_paths(self) -> "Settings":
-        """Convert configurable paths to absolute paths.
-
-        The database defaults to the application-data directory. Electron can
-        later provide a macOS/Windows-specific writable directory through an
-        environment variable.
-        """
 
         self.app_data_dir = self.app_data_dir.expanduser().resolve()
         self.models_dir = self.models_dir.expanduser().resolve()
@@ -99,16 +104,18 @@ class Settings(BaseSettings):
         return self
 
     def ensure_directories(self) -> None:
-        """Create only the directories needed by the application.
-
-        Phase 1 does not create the SQLite file. Database initialization is a
-        Phase 2 responsibility.
-        """
 
         self.app_data_dir.mkdir(parents=True, exist_ok=True)
         self.models_dir.mkdir(parents=True, exist_ok=True)
+        self.video_upload_dir.mkdir(parents=True, exist_ok=True)
         assert self.database_path is not None
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def video_upload_dir(self) -> Path:
+        """Private directory for validation videos uploaded through the API."""
+
+        return self.app_data_dir / "video_uploads"
 
 
 @lru_cache(maxsize=1)

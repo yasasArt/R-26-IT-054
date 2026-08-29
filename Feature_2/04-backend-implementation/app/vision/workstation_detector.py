@@ -1,10 +1,104 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 EXPECTED_CLASS_NAME = "workstation"
+
+
+@dataclass(frozen=True, slots=True)
+class WorkstationLatchUpdate:
+    state: str
+    available: bool
+    failed_rechecks: int
+    newly_latched: bool = False
+    paused: bool = False
+    reacquired: bool = False
+
+
+class WorkstationLatch:
+    """Confirm, latch, periodically recheck and safely reacquire a workstation."""
+
+    SEARCHING = "SEARCHING"
+    LATCHED = "LATCHED"
+    PAUSED = "PAUSED"
+
+    def __init__(
+        self,
+        *,
+        confirmations_required: int = 3,
+        initial_check_interval_seconds: float = 0.5,
+        recheck_interval_seconds: float = 5.0,
+        allowed_failed_rechecks: int = 2,
+    ) -> None:
+        if confirmations_required < 1:
+            raise ValueError("confirmations_required must be at least 1")
+        if initial_check_interval_seconds < 0:
+            raise ValueError("initial_check_interval_seconds cannot be negative")
+        if recheck_interval_seconds <= 0:
+            raise ValueError("recheck_interval_seconds must be positive")
+        if allowed_failed_rechecks < 0:
+            raise ValueError("allowed_failed_rechecks cannot be negative")
+        self.confirmations_required = confirmations_required
+        self.initial_check_interval_seconds = initial_check_interval_seconds
+        self.recheck_interval_seconds = recheck_interval_seconds
+        self.allowed_failed_rechecks = allowed_failed_rechecks
+        self.reset()
+
+    def reset(self) -> None:
+        self.state = self.SEARCHING
+        self.consecutive_detections = 0
+        self.failed_rechecks = 0
+        self.last_checked_at: datetime | None = None
+
+    @property
+    def available(self) -> bool:
+        return self.state == self.LATCHED
+
+    def should_check(self, observed_at: datetime) -> bool:
+        if self.last_checked_at is None:
+            return True
+        interval = (
+            self.recheck_interval_seconds
+            if self.state == self.LATCHED
+            else self.initial_check_interval_seconds
+        )
+        return (observed_at - self.last_checked_at).total_seconds() >= interval
+
+    def observe(self, detected: bool, observed_at: datetime) -> WorkstationLatchUpdate:
+        previous_state = self.state
+        self.last_checked_at = observed_at
+
+        if self.state == self.LATCHED:
+            if detected:
+                self.failed_rechecks = 0
+            else:
+                self.failed_rechecks += 1
+                if self.failed_rechecks > self.allowed_failed_rechecks:
+                    self.state = self.PAUSED
+                    self.consecutive_detections = 0
+        elif detected:
+            self.consecutive_detections += 1
+            if self.consecutive_detections >= self.confirmations_required:
+                self.state = self.LATCHED
+                self.failed_rechecks = 0
+        else:
+            self.consecutive_detections = 0
+
+        newly_latched = previous_state == self.SEARCHING and self.state == self.LATCHED
+        reacquired = previous_state == self.PAUSED and self.state == self.LATCHED
+        paused = previous_state == self.LATCHED and self.state == self.PAUSED
+        return WorkstationLatchUpdate(
+            state=self.state,
+            available=self.available,
+            failed_rechecks=self.failed_rechecks,
+            newly_latched=newly_latched,
+            paused=paused,
+            reacquired=reacquired,
+        )
 
 
 class DetectorDependencyError(RuntimeError):

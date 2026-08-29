@@ -8,6 +8,7 @@ from app.api.routes.iot_events import router as iot_events_router
 from app.api.routes.models import router as models_router
 from app.api.routes.piece_events import router as piece_events_router
 from app.api.routes.sessions import router as sessions_router
+from app.api.routes.vision import router as vision_router
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(health_router)
@@ -18,3 +19,4 @@ api_router.include_router(piece_events_router)
 api_router.include_router(iot_events_router)
 api_router.include_router(analytics_router)
 api_router.include_router(models_router)
+api_router.include_router(vision_router)
