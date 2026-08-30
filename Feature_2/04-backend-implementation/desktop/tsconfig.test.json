@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "outDir": "dist-test",
+    "rootDir": ".",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"]
+  },
+  "include": [
+    "src/main/backend-manager.ts",
+    "src/main/backend-policy.ts",
+    "src/shared/api-types.ts",
+    "tests/**/*.ts"
+  ]
+}
+
