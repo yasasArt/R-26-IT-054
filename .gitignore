@@ -1,0 +1,27 @@
+.DS_Store
+
+*__pycache__/
+
+*node_modules/
+*.venv/
+
+# Feature 2 ignored files
+.vscode
+Feature_2/00-raw-videos/videos
+Feature_2/01-data-annotation-and-dataset-preparation/generated_clips/train
+Feature_2/01-data-annotation-and-dataset-preparation/generated_clips/validation
+Feature_2/01-data-annotation-and-dataset-preparation/generated_clips/test
+Feature_2/03-yolo-workstation-validation/raw_videos
+Feature_2/03-yolo-workstation-validation/extracted_frames
+Feature_2/03-yolo-workstation-validation/shuffled_frames
+Feature_2/03-yolo-workstation-validation/dataset
+Feature_2/03-yolo-workstation-validation/runs
+Feature_2/03-yolo-workstation-validation/yolov8n.pt
+Feature_2/04-backend-implementation/.venv
+Feature_2/04-backend-implementation/garment_counter_backend.egg-info
+Feature_2/04-backend-implementation/data
+Feature_2/04-backend-implementation/.env
+Feature_2/04-backend-implementation/build
+Feature_2/04-backend-implementation/models
+Feature_2/06-garment-counting-desktop-app/backend/garment_counter_sidecar.egg-info/
+Feature_2/06-garment-counting-desktop-app/resources/models/
