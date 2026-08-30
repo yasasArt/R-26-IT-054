@@ -23,5 +23,5 @@ Feature_2/04-backend-implementation/data
 Feature_2/04-backend-implementation/.env
 Feature_2/04-backend-implementation/build
 Feature_2/04-backend-implementation/models
-Feature_2/06-garment-counting-desktop-app/resources/models
-Feature_2/06-garment-counting-desktop-app/backend/garment_counter_sidecar.egg-info
+Feature_2/06-garment-counting-desktop-app/backend/garment_counter_sidecar.egg-info/
+Feature_2/06-garment-counting-desktop-app/resources/models/
