@@ -4,7 +4,12 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
 
-
+class GarmentData(BaseModel):
+    style_name: str
+    main_color: str
+    other_colors: Optional[str] = None
+    confidence: float
+    image_base64: Optional[str] = None
 
 
 class BreakWindow(BaseModel):
