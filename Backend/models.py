@@ -21,6 +21,11 @@ class BreakWindow(BaseModel):
 # The four classes the detection model is trained on - keys match style_name
 # exactly as the CV pipeline writes it (garments.style_name), so category
 # targets can be joined against packed counts with a plain equality filter.
+class CategoryTargets(BaseModel):
+    SHIRT: int = 0
+    T_SHIRT: int = 0
+    TROUSER: int = 0
+    SHORT: int = 0
 
 
 class Settings(BaseModel):
