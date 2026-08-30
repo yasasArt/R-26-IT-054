@@ -1,0 +1,13 @@
+fastapi<1,>=0.115
+uvicorn[standard]<1,>=0.30
+python-multipart>=0.0.9
+numpy<3,>=1.26
+opencv-python<5,>=4.10
+torch<3,>=2.2
+ultralytics<9,>=8.3
+
+[dev]
+pytest<10,>=8
+
+[release]
+pyinstaller<7,>=6.12

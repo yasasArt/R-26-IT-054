@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: garment-size-backend
+Version: 1.0.0
+Summary: Marker-free garment measurement, size classification and SQLite counting
+Requires-Python: <3.13,>=3.12
+Requires-Dist: fastapi<1,>=0.115
+Requires-Dist: uvicorn[standard]<1,>=0.30
+Requires-Dist: python-multipart>=0.0.9
+Requires-Dist: numpy<3,>=1.26
+Requires-Dist: opencv-python<5,>=4.10
+Requires-Dist: torch<3,>=2.2
+Requires-Dist: ultralytics<9,>=8.3
+Provides-Extra: dev
+Requires-Dist: pytest<10,>=8; extra == "dev"
+Provides-Extra: release
+Requires-Dist: pyinstaller<7,>=6.12; extra == "release"
