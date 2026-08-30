@@ -1,0 +1,27 @@
+{
+  "created_at": "2026-08-15T16:34:02",
+  "original_videos_directory": "C:\\Users\\wgucg\\Desktop\\videos\\videos\\02_model_development\\best_frame_selector\\sample_videos",
+  "original_video_files_found": 28,
+  "usable_best_frames_audited": 183,
+  "scale_status_counts": {
+    "ORIGINAL_RESOLUTION": 183
+  },
+  "video_resolution_counts_by_frame": {
+    "1068x1080": 1,
+    "1080x1080": 1,
+    "480x586": 25,
+    "480x596": 28,
+    "480x632": 6,
+    "480x684": 17,
+    "480x742": 13,
+    "480x804": 7,
+    "480x808": 27,
+    "480x852": 15,
+    "480x862": 10,
+    "480x876": 9,
+    "854x480": 24
+  },
+  "videos_with_multiple_best_frame_resolutions": {},
+  "duplicate_video_ids": {},
+  "audit_csv_path": "C:\\Users\\wgucg\\Desktop\\videos\\videos\\06_garment_measurement\\data\\video_frame_scale_audit.csv"
+}

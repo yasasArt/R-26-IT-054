@@ -1,0 +1,4 @@
+﻿split,videos,video_ids,frames,READY,NOT_READY,INVALID,READY_percent,events,events_with_READY,events_without_READY
+train,20,"v01, v03, v04, v05, v06, v07, v08, v09, v12, v13, v14, v15, v16, v17, v18, v20, v22, v23, v25, v26",16304,2610,10204,3490,16.0083,162,149,13
+val,4,"v02, v21, v24, v27",3244,572,1951,721,17.6326,33,28,5
+test,4,"v10, v11, v19, v28",3507,634,2127,746,18.0781,35,31,4

@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['new-garment']
+
+roboflow:
+  workspace: uchith-chethana-s-workspace
+  project: new-garment
+  version: 2
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/uchith-chethana-s-workspace/new-garment/dataset/2

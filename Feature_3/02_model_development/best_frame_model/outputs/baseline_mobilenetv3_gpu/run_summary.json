@@ -1,0 +1,22 @@
+{
+  "device": "cuda",
+  "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+  "gpu_memory_gb": 3.99951171875,
+  "automatic_mixed_precision": true,
+  "batch_size": 32,
+  "data_loader_workers": 4,
+  "best_epoch": 14,
+  "best_validation_macro_f1": 0.8604199905707359,
+  "validation_accuracy_at_best": 0.8853267570900123,
+  "validation_loss_at_best": 0.7585131333101296,
+  "elapsed_minutes": 31.69113132158915,
+  "train_images": 16304,
+  "validation_images": 3244,
+  "class_to_idx": {
+    "INVALID": 0,
+    "NOT_READY": 1,
+    "READY": 2
+  },
+  "test_split_used": false,
+  "peak_gpu_memory_gb": 0.30838489532470703
+}

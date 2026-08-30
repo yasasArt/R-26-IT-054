@@ -1,0 +1,5 @@
+﻿video_id,frames,false_ready,missed_ready,non_ready_confusion,total_errors
+v02,972,34,20,40,94
+v21,775,0,50,22,72
+v24,953,10,2,18,30
+v27,544,9,13,2,24
