@@ -1,0 +1,26 @@
+# Node / Electron
+desktop/node_modules/
+desktop/.webpack/
+desktop/.build-check/
+desktop/out/
+desktop/coverage/
+desktop/*.tsbuildinfo
+
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/.pytest_cache/
+backend/**/*.pyc
+
+# Local data and secrets
+.env
+.env.*
+!.env.example
+data/
+logs/
+*.db
+*.sqlite
+
+# Operating-system files
+.DS_Store
+Thumbs.db

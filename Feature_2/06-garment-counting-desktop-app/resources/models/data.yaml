@@ -1,0 +1,15 @@
+path: ./dataset
+
+train: ./train/images
+val: ./valid/images
+test: ./test/images
+
+nc: 1
+names: ['workstation']
+
+# roboflow:
+#   workspace: nuwans-workshop
+#   project: workstation-validation
+#   version: 3
+#   license: CC BY 4.0
+#   url: https://universe.roboflow.com/nuwans-workshop/workstation-validation/dataset/3
