@@ -1,0 +1,10 @@
+{
+  "camera_height_cm": 100.0,
+  "pixels_per_cm": 13.6,
+  "frame_width": 1920,
+  "frame_height": 1080,
+  "calibration_method": "fixed_height_100cm",
+  "camera_model": "Logitech C922",
+  "runtime_marker_required": false,
+  "note": "Keep camera at 100 cm, 90 degrees and zoom 1.0x."
+}
