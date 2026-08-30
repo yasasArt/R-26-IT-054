@@ -9,7 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
-from database import get_connection
+from Feature_4.Backend.database import get_connection
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 

@@ -5,7 +5,7 @@ from typing import Dict, List
 
 import numpy as np
 
-from database import get_connection
+from Feature_4.Backend.database import get_connection
 
 
 def _parse_hhmm(value: str) -> time:

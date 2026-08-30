@@ -5,9 +5,9 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-import analytics
-from database import get_connection
-from models import CameraDevice, DowntimeEvent, GarmentData, Settings
+import Feature_4.Backend.analytics as analytics
+from Feature_4.Backend.database import get_connection
+from Feature_4.Backend.models import CameraDevice, DowntimeEvent, GarmentData, Settings
 
 app = FastAPI()
 
