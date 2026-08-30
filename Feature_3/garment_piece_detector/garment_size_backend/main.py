@@ -1,4 +1,6 @@
 import base64
+import csv
+import io
 import json
 import math
 import os
@@ -31,6 +33,7 @@ from fastapi import (
 from fastapi.middleware.cors import (
     CORSMiddleware,
 )
+from fastapi.responses import StreamingResponse
 from ultralytics import YOLO
 
 
@@ -78,7 +81,7 @@ CAMERA_HEIGHT_CM = 100.0
 INFERENCE_CONFIDENCE = 0.25
 MINIMUM_CONFIDENCE = 0.60
 SHIRT_INFERENCE_CONFIDENCE = 0.15
-SHIRT_MINIMUM_CONFIDENCE = 0.45
+SHIRT_MINIMUM_CONFIDENCE = 0.38
 MINIMUM_MASK_AREA_RATIO = 0.04
 MAXIMUM_MASK_AREA_RATIO = 0.50
 
@@ -89,7 +92,7 @@ INFERENCE_IMAGE_SIZE = 640
 # removal frames re-arm the next item, including another garment with exactly
 # the same type, colour and size.
 STABLE_FRAMES_REQUIRED = 3
-SHIRT_STABLE_FRAMES_REQUIRED = 5
+SHIRT_STABLE_FRAMES_REQUIRED = 3
 EMPTY_FRAMES_TO_REARM = 3
 MAX_STABLE_WIDTH_CHANGE_CM = 1.5
 MAX_STABLE_LENGTH_CHANGE_CM = 2.0
@@ -467,12 +470,12 @@ def stable_samples_are_consistent(
     current: dict,
 ) -> bool:
     width_limit = (
-        2.0
+        2.5
         if current["garment_type"] == "shirt"
         else MAX_STABLE_WIDTH_CHANGE_CM
     )
     length_limit = (
-        2.5
+        3.0
         if current["garment_type"] == "shirt"
         else MAX_STABLE_LENGTH_CHANGE_CM
     )
@@ -616,6 +619,26 @@ def find_latest_model() -> Path:
                 f"GARMENT_MODEL_PATH does not exist: {configured_path}"
             )
         return configured_path
+
+    # The repository and packaged desktop app keep the uploaded model in
+    # resources/models. This relative path works on Windows, macOS and Linux.
+    resource_model = (
+        BACKEND_DIRECTORY.parent
+        / "resources"
+        / "models"
+        / "best_model.pt"
+    )
+    if resource_model.exists():
+        return resource_model
+
+    # Backward-compatible model location used by older ThreadScan builds.
+    bundled_model = (
+        BACKEND_DIRECTORY
+        / "models"
+        / "best.pt"
+    )
+    if bundled_model.exists():
+        return bundled_model
 
     preferred_v5_model = (
         EXPERIMENT_RESULTS
@@ -2413,6 +2436,69 @@ def get_measurements(
     }
 
 
+@app.get("/measurements/evaluation.csv")
+def export_measurement_evaluation_csv(
+    limit: int = 10000,
+):
+    """
+    Download persistent predictions as an evaluation-ready CSV file.
+
+    The predicted fields are filled automatically from SQLite. Complete the
+    blank test_garment_id, placement_number, actual_size, actual_width_cm and
+    actual_height_cm fields using the garment label and tape measurements.
+    """
+    safe_limit = max(1, min(int(limit), 100000))
+    measurements = get_all_measurements(limit=safe_limit)
+
+    fieldnames = [
+        "record_id",
+        "test_garment_id",
+        "placement_number",
+        "garment_type",
+        "actual_size",
+        "predicted_size",
+        "actual_width_cm",
+        "predicted_width_cm",
+        "actual_height_cm",
+        "predicted_height_cm",
+        "confidence",
+        "detected_at",
+    ]
+
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+
+    for measurement in measurements:
+        writer.writerow(
+            {
+                "record_id": measurement.get("id", ""),
+                "test_garment_id": "",
+                "placement_number": "",
+                "garment_type": measurement.get("garment_type", ""),
+                "actual_size": "",
+                "predicted_size": measurement.get("size", ""),
+                "actual_width_cm": "",
+                "predicted_width_cm": measurement.get("width_cm", ""),
+                "actual_height_cm": "",
+                "predicted_height_cm": measurement.get("length_cm", ""),
+                "confidence": measurement.get("confidence", ""),
+                "detected_at": measurement.get("detected_at", ""),
+            }
+        )
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    filename = f"garment_measurement_evaluation_{timestamp}.csv"
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
 @app.post("/counts/reset")
 def reset_counts():
     """
@@ -2535,7 +2621,10 @@ async def measure_garment(
             device=DEVICE,
             half=torch.cuda.is_available(),
             retina_masks=True,
-            augment=(garment_type == "shirt"),
+            # Test-time augmentation was the main source of the long pause
+            # seen with patterned shirts. The contrast pass is already a
+            # second observation, so keep it as one fast inference.
+            augment=False,
             verbose=False,
         )
         inference_variant = "contrast_enhanced"
@@ -2568,6 +2657,52 @@ async def measure_garment(
         detection_zone.shape,
         garment_type,
     )
+
+    # A raw YOLO result can contain a weak/background mask and therefore skip
+    # the old "no mask" retry, even though candidate validation rejects it.
+    # Retry rejected shirt candidates once on the contrast-enhanced frame.
+    # This fixes intermittent shirt misses without running the expensive retry
+    # for every successful frame.
+    if (
+        garment_mask is None
+        and garment_type == "shirt"
+        and inference_variant == "original"
+    ):
+        enhanced_zone = enhance_low_contrast_frame(
+            detection_zone
+        )
+        retry_predictions = model.predict(
+            source=enhanced_zone,
+            imgsz=INFERENCE_IMAGE_SIZE,
+            conf=prediction_confidence,
+            iou=0.45,
+            max_det=3,
+            agnostic_nms=True,
+            device=DEVICE,
+            half=torch.cuda.is_available(),
+            retina_masks=True,
+            augment=False,
+            verbose=False,
+        )
+
+        if retry_predictions:
+            (
+                retry_state,
+                retry_message,
+                retry_mask,
+                retry_confidence,
+            ) = select_best_garment_mask(
+                retry_predictions[0],
+                detection_zone.shape,
+                garment_type,
+            )
+
+            if retry_mask is not None:
+                mask_state = retry_state
+                mask_message = retry_message
+                garment_mask = retry_mask
+                confidence = retry_confidence
+                inference_variant = "contrast_enhanced"
     
     if garment_mask is None:
         tracking_data = update_tracker_non_ready(
