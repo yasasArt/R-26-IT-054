@@ -27,7 +27,17 @@ def root():
 
 # ============================================================ Garments =====
 
+@app.get("/api/garments/")
+def get_all_garments():
+    with get_connection() as conn:
+        rows = conn.execute("SELECT * FROM garments ORDER BY id DESC").fetchall()
 
+    garments = []
+    for row in rows:
+        garment = dict(row)
+        garment["_id"] = str(garment.pop("id"))
+        garments.append(garment)
+    return garments
 
 
 @app.post("/api/garments/")
