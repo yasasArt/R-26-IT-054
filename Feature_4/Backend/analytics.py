@@ -16,7 +16,26 @@ def _parse_hhmm(value: str) -> time:
 CATEGORIES = ["SHIRT", "T_SHIRT", "TROUSER", "SHORT"]
 
 
+def get_settings() -> dict:
+    with get_connection() as conn:
+        row = conn.execute("SELECT * FROM settings WHERE id = 1").fetchone()
+    if not row:
+        raise ValueError("Settings have not been configured yet. Call PUT /api/settings first.")
+    settings = dict(row)
+    settings["breaks"] = json.loads(settings.pop("breaks_json"))
+    settings["category_targets"] = json.loads(settings.pop("category_targets_json") or "{}")
 
+    # count_since is the precise moment "Total Packed" and the current-rate
+    # calculations start counting from - distinct from start_date, which
+    # only marks the beginning of the schedule window (due_date - start_date
+    # = days allocated). Saving a new target moves both to now; completing a
+    # target and auto-resetting only moves count_since, since the schedule
+    # window itself hasn't changed. Falls back to start_date-at-midnight for
+    # rows written before this column existed, or if it's ever cleared.
+    start_date = date.fromisoformat(settings["start_date"])
+    settings["count_since"] = settings["count_since"] or datetime.combine(start_date, time.min).isoformat()
+
+    return settings
 
 
 def scheduled_hours_per_day(settings: dict) -> float:
