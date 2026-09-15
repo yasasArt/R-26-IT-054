@@ -13,7 +13,7 @@ from Feature_4.Backend.database import get_connection
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
-MONGO_URI = os.environ["MONGO_URI"]
+# MONGO_URI = os.environ["MONGO_URI"]
 
 
 def migrate():
