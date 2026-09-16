@@ -4,6 +4,8 @@
 *node_modules/
 *.venv/
 
+*.DS_Store
+
 # Feature 2 ignored files
 .vscode
 Feature_2/00-raw-videos/videos
