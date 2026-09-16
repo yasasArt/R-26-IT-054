@@ -1,0 +1,190 @@
+{
+  "status": "PASS",
+  "dataset": {
+    "annotation_row_count": 907,
+    "video_count": 60,
+    "clip_count": 6024,
+    "states": [
+      "IDLE_SETUP",
+      "SEWING"
+    ],
+    "operations": [
+      "COLLAR",
+      "POCKET",
+      "SLEEVE"
+    ]
+  },
+  "validation_checks": {
+    "row_count_preserved": "PASS",
+    "no_duplicate_rows": "PASS",
+    "original_columns_unchanged": "PASS",
+    "valid_state_labels": "PASS",
+    "valid_operation_labels": "PASS",
+    "valid_time_ranges": "PASS",
+    "one_operation_per_video": "PASS",
+    "no_overlapping_segments": "PASS",
+    "annotation_and_split_videos_match": "PASS",
+    "clip_manifest_matches_video_splits": "PASS"
+  },
+  "split_decision": {
+    "decision": "KEEP_EXISTING_SPLIT",
+    "missing_split_operation_combinations": []
+  },
+  "source_checksums": {
+    "original_annotation_sha256": "8ad2cd39ffc2dcdad6094c4bb63e7a86688f0e6632b2e8b6bdf2e406953679d7",
+    "enhanced_annotation_sha256": "26845516246d39d7f073a2bc2ee493f7cce2a9459516049ebd3ed8547b78a69b",
+    "split_manifest_sha256": "1fe1f84be9ced504d151ab594531d086fc4bdf1bb05314b478f1d53ba53a4627",
+    "clip_manifest_sha256": "d2dd1ebf22c24f2ef559ea8be1d1b121ea1156be89bf2e0e68402e7e77aeb771"
+  },
+  "operation_distribution": [
+    {
+      "operation_type": "COLLAR",
+      "video_count": 23,
+      "segment_count": 259,
+      "idle_setup_segment_count": 121,
+      "sewing_segment_count": 138,
+      "idle_setup_duration_sec": "1240.420",
+      "sewing_duration_sec": "2999.940",
+      "total_duration_sec": "4240.360"
+    },
+    {
+      "operation_type": "POCKET",
+      "video_count": 11,
+      "segment_count": 121,
+      "idle_setup_segment_count": 59,
+      "sewing_segment_count": 62,
+      "idle_setup_duration_sec": "503.905",
+      "sewing_duration_sec": "1723.592",
+      "total_duration_sec": "2227.497"
+    },
+    {
+      "operation_type": "SLEEVE",
+      "video_count": 26,
+      "segment_count": 527,
+      "idle_setup_segment_count": 262,
+      "sewing_segment_count": 265,
+      "idle_setup_duration_sec": "1574.799",
+      "sewing_duration_sec": "2539.119",
+      "total_duration_sec": "4113.918"
+    }
+  ],
+  "split_operation_distribution": [
+    {
+      "split": "train",
+      "operation_type": "COLLAR",
+      "video_count": 16,
+      "segment_count": 190,
+      "idle_setup_segment_count": 89,
+      "sewing_segment_count": 101,
+      "idle_setup_duration_sec": "920.920",
+      "sewing_duration_sec": "2190.940",
+      "total_clip_count": 1713,
+      "idle_setup_clip_count": 841,
+      "sewing_clip_count": 872
+    },
+    {
+      "split": "train",
+      "operation_type": "POCKET",
+      "video_count": 8,
+      "segment_count": 79,
+      "idle_setup_segment_count": 38,
+      "sewing_segment_count": 41,
+      "idle_setup_duration_sec": "331.378",
+      "sewing_duration_sec": "1175.850",
+      "total_clip_count": 757,
+      "idle_setup_clip_count": 294,
+      "sewing_clip_count": 463
+    },
+    {
+      "split": "train",
+      "operation_type": "SLEEVE",
+      "video_count": 18,
+      "segment_count": 366,
+      "idle_setup_segment_count": 183,
+      "sewing_segment_count": 183,
+      "idle_setup_duration_sec": "1070.670",
+      "sewing_duration_sec": "1715.590",
+      "total_clip_count": 1558,
+      "idle_setup_clip_count": 888,
+      "sewing_clip_count": 670
+    },
+    {
+      "split": "validation",
+      "operation_type": "COLLAR",
+      "video_count": 4,
+      "segment_count": 38,
+      "idle_setup_segment_count": 17,
+      "sewing_segment_count": 21,
+      "idle_setup_duration_sec": "174.500",
+      "sewing_duration_sec": "450.000",
+      "total_clip_count": 405,
+      "idle_setup_clip_count": 112,
+      "sewing_clip_count": 293
+    },
+    {
+      "split": "validation",
+      "operation_type": "POCKET",
+      "video_count": 1,
+      "segment_count": 12,
+      "idle_setup_segment_count": 6,
+      "sewing_segment_count": 6,
+      "idle_setup_duration_sec": "44.433",
+      "sewing_duration_sec": "163.852",
+      "total_clip_count": 131,
+      "idle_setup_clip_count": 26,
+      "sewing_clip_count": 105
+    },
+    {
+      "split": "validation",
+      "operation_type": "SLEEVE",
+      "video_count": 4,
+      "segment_count": 86,
+      "idle_setup_segment_count": 42,
+      "sewing_segment_count": 44,
+      "idle_setup_duration_sec": "278.603",
+      "sewing_duration_sec": "475.513",
+      "total_clip_count": 459,
+      "idle_setup_clip_count": 164,
+      "sewing_clip_count": 295
+    },
+    {
+      "split": "test",
+      "operation_type": "COLLAR",
+      "video_count": 3,
+      "segment_count": 31,
+      "idle_setup_segment_count": 15,
+      "sewing_segment_count": 16,
+      "idle_setup_duration_sec": "145.000",
+      "sewing_duration_sec": "359.000",
+      "total_clip_count": 325,
+      "idle_setup_clip_count": 92,
+      "sewing_clip_count": 233
+    },
+    {
+      "split": "test",
+      "operation_type": "POCKET",
+      "video_count": 2,
+      "segment_count": 30,
+      "idle_setup_segment_count": 15,
+      "sewing_segment_count": 15,
+      "idle_setup_duration_sec": "128.094",
+      "sewing_duration_sec": "383.890",
+      "total_clip_count": 327,
+      "idle_setup_clip_count": 78,
+      "sewing_clip_count": 249
+    },
+    {
+      "split": "test",
+      "operation_type": "SLEEVE",
+      "video_count": 4,
+      "segment_count": 75,
+      "idle_setup_segment_count": 37,
+      "sewing_segment_count": 38,
+      "idle_setup_duration_sec": "225.526",
+      "sewing_duration_sec": "348.016",
+      "total_clip_count": 349,
+      "idle_setup_clip_count": 136,
+      "sewing_clip_count": 213
+    }
+  ]
+}

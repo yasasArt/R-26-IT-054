@@ -1,0 +1,10 @@
+split,operation_type,video_count,segment_count,idle_setup_segment_count,sewing_segment_count,idle_setup_duration_sec,sewing_duration_sec,total_clip_count,idle_setup_clip_count,sewing_clip_count
+train,COLLAR,16,190,89,101,920.920,2190.940,1713,841,872
+train,POCKET,8,79,38,41,331.378,1175.850,757,294,463
+train,SLEEVE,18,366,183,183,1070.670,1715.590,1558,888,670
+validation,COLLAR,4,38,17,21,174.500,450.000,405,112,293
+validation,POCKET,1,12,6,6,44.433,163.852,131,26,105
+validation,SLEEVE,4,86,42,44,278.603,475.513,459,164,295
+test,COLLAR,3,31,15,16,145.000,359.000,325,92,233
+test,POCKET,2,30,15,15,128.094,383.890,327,78,249
+test,SLEEVE,4,75,37,38,225.526,348.016,349,136,213

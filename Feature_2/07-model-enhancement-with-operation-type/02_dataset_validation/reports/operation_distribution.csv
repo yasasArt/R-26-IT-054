@@ -1,0 +1,4 @@
+operation_type,video_count,segment_count,idle_setup_segment_count,sewing_segment_count,idle_setup_duration_sec,sewing_duration_sec,total_duration_sec
+COLLAR,23,259,121,138,1240.420,2999.940,4240.360
+POCKET,11,121,59,62,503.905,1723.592,2227.497
+SLEEVE,26,527,262,265,1574.799,2539.119,4113.918
