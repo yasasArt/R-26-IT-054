@@ -1,0 +1,109 @@
+{
+  "status": "PASS",
+  "split_strategy": "Existing video-level split preserved",
+  "phase_2_decision": "KEEP_EXISTING_SPLIT",
+  "counts": {
+    "video_count": 60,
+    "clip_count": 6024,
+    "train_video_count": 42,
+    "validation_video_count": 9,
+    "test_video_count": 9,
+    "train_clip_count": 4028,
+    "validation_clip_count": 995,
+    "test_clip_count": 1001
+  },
+  "distribution": [
+    {
+      "split": "train",
+      "operation_type": "COLLAR",
+      "video_count": 16,
+      "clip_count": 1713,
+      "idle_setup_clip_count": 841,
+      "sewing_clip_count": 872
+    },
+    {
+      "split": "train",
+      "operation_type": "POCKET",
+      "video_count": 8,
+      "clip_count": 757,
+      "idle_setup_clip_count": 294,
+      "sewing_clip_count": 463
+    },
+    {
+      "split": "train",
+      "operation_type": "SLEEVE",
+      "video_count": 18,
+      "clip_count": 1558,
+      "idle_setup_clip_count": 888,
+      "sewing_clip_count": 670
+    },
+    {
+      "split": "validation",
+      "operation_type": "COLLAR",
+      "video_count": 4,
+      "clip_count": 405,
+      "idle_setup_clip_count": 112,
+      "sewing_clip_count": 293
+    },
+    {
+      "split": "validation",
+      "operation_type": "POCKET",
+      "video_count": 1,
+      "clip_count": 131,
+      "idle_setup_clip_count": 26,
+      "sewing_clip_count": 105
+    },
+    {
+      "split": "validation",
+      "operation_type": "SLEEVE",
+      "video_count": 4,
+      "clip_count": 459,
+      "idle_setup_clip_count": 164,
+      "sewing_clip_count": 295
+    },
+    {
+      "split": "test",
+      "operation_type": "COLLAR",
+      "video_count": 3,
+      "clip_count": 325,
+      "idle_setup_clip_count": 92,
+      "sewing_clip_count": 233
+    },
+    {
+      "split": "test",
+      "operation_type": "POCKET",
+      "video_count": 2,
+      "clip_count": 327,
+      "idle_setup_clip_count": 78,
+      "sewing_clip_count": 249
+    },
+    {
+      "split": "test",
+      "operation_type": "SLEEVE",
+      "video_count": 4,
+      "clip_count": 349,
+      "idle_setup_clip_count": 136,
+      "sewing_clip_count": 213
+    }
+  ],
+  "checks": {
+    "phase_2_status": "PASS",
+    "existing_split_preserved": "PASS",
+    "all_videos_have_operation_type": "PASS",
+    "all_clips_have_operation_type": "PASS",
+    "clip_names_are_unique": "PASS",
+    "clip_paths_are_unique": "PASS",
+    "clip_splits_match_video_splits": "PASS",
+    "all_operations_exist_in_all_splits": "PASS"
+  },
+  "source_checksums": {
+    "phase_2_summary_sha256": "db71f13196f64c9eb3d052f4e8678cabbe640aad3fbdb6fa11edc39ebb1cb990",
+    "enhanced_annotation_sha256": "26845516246d39d7f073a2bc2ee493f7cce2a9459516049ebd3ed8547b78a69b",
+    "original_split_manifest_sha256": "1fe1f84be9ced504d151ab594531d086fc4bdf1bb05314b478f1d53ba53a4627",
+    "original_clip_manifest_sha256": "d2dd1ebf22c24f2ef559ea8be1d1b121ea1156be89bf2e0e68402e7e77aeb771"
+  },
+  "output_checksums": {
+    "enhanced_split_manifest_sha256": "acf74f6048208af5162de1696a926807d6150b923e5c72569d9acdee0f1cb7ef",
+    "enhanced_clip_manifest_sha256": "8e799ea290f039c1c4a9b7fc53143e69fc6ec30e6faddc4ef93109963d58ec9a"
+  }
+}
