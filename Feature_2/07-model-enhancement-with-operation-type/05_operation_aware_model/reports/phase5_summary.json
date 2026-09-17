@@ -1,0 +1,73 @@
+{
+  "status": "PASS",
+  "architecture": "OperationAwareTemporalMobileNetV3Small",
+  "configuration": {
+    "seed": 42,
+    "frames_per_clip": 8,
+    "input_size": 224,
+    "num_classes": 2,
+    "num_operations": 3,
+    "visual_feature_dim": 576,
+    "operation_feature_dim": 3,
+    "combined_feature_dim": 579,
+    "classifier_hidden_dim": 1024,
+    "dropout": 0.2,
+    "operation_encoding": "one_hot",
+    "operation_fusion": "concatenation",
+    "temporal_aggregation": "mean_pooling"
+  },
+  "classifier_contract": {
+    "first_layer": "579 -> 1024",
+    "activation": "Hardswish",
+    "dropout": 0.2,
+    "final_layer": "1024 -> 2"
+  },
+  "forward_test": {
+    "input_clip_shape": [
+      2,
+      8,
+      3,
+      224,
+      224
+    ],
+    "operation_input_shape": [
+      2
+    ],
+    "output_shape": [
+      2,
+      2
+    ],
+    "output_dtype": "torch.float32",
+    "operation_changes_output": true,
+    "maximum_operation_difference": 0.009271625429391861,
+    "invalid_operation_rejected": true
+  },
+  "optimizer": {
+    "name": "AdamW",
+    "parameter_group_count": 2,
+    "backbone_learning_rate": 0.0001,
+    "classifier_learning_rate": 0.0003,
+    "weight_decay": 0.0001
+  },
+  "parameters": {
+    "total": 1522978,
+    "trainable": 1522978,
+    "backbone": 927008,
+    "classifier": 595970
+  },
+  "environment": {
+    "python_version": "3.10.19",
+    "pytorch_version": "2.13.0",
+    "torchvision_version": "0.28.0"
+  },
+  "checks": {
+    "visual_feature_dimension": "PASS",
+    "operation_feature_dimension": "PASS",
+    "combined_feature_dimension": "PASS",
+    "classifier_contract": "PASS",
+    "forward_output_shape": "PASS",
+    "operation_affects_output": "PASS",
+    "invalid_operation_rejected": "PASS",
+    "optimizer_parameter_groups": "PASS"
+  }
+}

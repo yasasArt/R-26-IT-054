@@ -1,0 +1,160 @@
+{
+  "status": "PASS",
+  "dataset_dir": "/Users/nuwandharmarathna/Desktop/Projects/R-26-IT-054/Feature_2/01-data-annotation-and-dataset-preparation/generated_clips",
+  "manifest_path": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/03_dataset_splitting/outputs/enhanced_clip_manifest.csv",
+  "operation_mapping_path": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/04_operation_aware_dataset/config/operation_mapping.json",
+  "configuration": {
+    "frames_per_clip": 8,
+    "input_size": 224,
+    "batch_size": 2
+  },
+  "checks": {
+    "all_clip_files_exist": "PASS",
+    "operation_mapping_valid": "PASS",
+    "all_splits_loaded": "PASS",
+    "no_video_leakage": "PASS",
+    "clip_tensor_shape_valid": "PASS",
+    "state_target_shape_valid": "PASS",
+    "operation_target_shape_valid": "PASS"
+  },
+  "splits": {
+    "train": {
+      "split": "train",
+      "clip_count": 4028,
+      "video_count": 42,
+      "state_counts": {
+        "IDLE_SETUP": 2023,
+        "SEWING": 2005
+      },
+      "operation_counts": {
+        "COLLAR": 1713,
+        "POCKET": 757,
+        "SLEEVE": 1558
+      },
+      "sample_batch": {
+        "clip_shape": [
+          2,
+          8,
+          3,
+          224,
+          224
+        ],
+        "clip_dtype": "torch.float32",
+        "state_target_shape": [
+          2
+        ],
+        "operation_target_shape": [
+          2
+        ],
+        "state_targets": [
+          1,
+          1
+        ],
+        "operation_targets": [
+          0,
+          0
+        ],
+        "video_names": [
+          "v01.mp4",
+          "v01.mp4"
+        ],
+        "operation_types": [
+          "COLLAR",
+          "COLLAR"
+        ]
+      }
+    },
+    "validation": {
+      "split": "validation",
+      "clip_count": 995,
+      "video_count": 9,
+      "state_counts": {
+        "IDLE_SETUP": 302,
+        "SEWING": 693
+      },
+      "operation_counts": {
+        "COLLAR": 405,
+        "POCKET": 131,
+        "SLEEVE": 459
+      },
+      "sample_batch": {
+        "clip_shape": [
+          2,
+          8,
+          3,
+          224,
+          224
+        ],
+        "clip_dtype": "torch.float32",
+        "state_target_shape": [
+          2
+        ],
+        "operation_target_shape": [
+          2
+        ],
+        "state_targets": [
+          1,
+          1
+        ],
+        "operation_targets": [
+          2,
+          2
+        ],
+        "video_names": [
+          "v20.mp4",
+          "v20.mp4"
+        ],
+        "operation_types": [
+          "SLEEVE",
+          "SLEEVE"
+        ]
+      }
+    },
+    "test": {
+      "split": "test",
+      "clip_count": 1001,
+      "video_count": 9,
+      "state_counts": {
+        "IDLE_SETUP": 306,
+        "SEWING": 695
+      },
+      "operation_counts": {
+        "COLLAR": 325,
+        "POCKET": 327,
+        "SLEEVE": 349
+      },
+      "sample_batch": {
+        "clip_shape": [
+          2,
+          8,
+          3,
+          224,
+          224
+        ],
+        "clip_dtype": "torch.float32",
+        "state_target_shape": [
+          2
+        ],
+        "operation_target_shape": [
+          2
+        ],
+        "state_targets": [
+          0,
+          0
+        ],
+        "operation_targets": [
+          0,
+          0
+        ],
+        "video_names": [
+          "v10.mp4",
+          "v10.mp4"
+        ],
+        "operation_types": [
+          "COLLAR",
+          "COLLAR"
+        ]
+      }
+    }
+  }
+}
