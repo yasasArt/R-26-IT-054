@@ -1,0 +1,65 @@
+{
+  "created_at_utc": "2026-09-20T03:52:21.532417+00:00",
+  "architecture": "OperationAwareTemporalMobileNetV3Small",
+  "dataset_dir": "/Users/nuwandharmarathna/Desktop/Projects/R-26-IT-054/Feature_2/01-data-annotation-and-dataset-preparation/generated_clips",
+  "manifest_path": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/03_dataset_splitting/outputs/enhanced_clip_manifest.csv",
+  "operation_mapping_path": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/04_operation_aware_dataset/config/operation_mapping.json",
+  "config": {
+    "seed": 42,
+    "frames_per_clip": 8,
+    "input_size": 224,
+    "batch_size": 8,
+    "num_workers": 4,
+    "epochs": 30,
+    "early_stopping_patience": 7,
+    "backbone_learning_rate": 0.0001,
+    "classifier_learning_rate": 0.0003,
+    "weight_decay": 0.0001,
+    "label_smoothing": 0.05,
+    "use_class_weights": true,
+    "pretrained": true,
+    "device": "auto"
+  },
+  "class_names": [
+    "IDLE_SETUP",
+    "SEWING"
+  ],
+  "class_to_index": {
+    "IDLE_SETUP": 0,
+    "SEWING": 1
+  },
+  "operation_names": [
+    "COLLAR",
+    "POCKET",
+    "SLEEVE"
+  ],
+  "operation_to_index": {
+    "COLLAR": 0,
+    "POCKET": 1,
+    "SLEEVE": 2
+  },
+  "train_clip_counts": {
+    "IDLE_SETUP": 2023,
+    "SEWING": 2005
+  },
+  "validation_clip_counts": {
+    "IDLE_SETUP": 302,
+    "SEWING": 693
+  },
+  "train_operation_counts": {
+    "COLLAR": 1713,
+    "POCKET": 757,
+    "SLEEVE": 1558
+  },
+  "validation_operation_counts": {
+    "COLLAR": 405,
+    "POCKET": 131,
+    "SLEEVE": 459
+  },
+  "train_video_count": 42,
+  "validation_video_count": 9,
+  "device": "mps",
+  "python_version": "3.10.19",
+  "pytorch_version": "2.13.0",
+  "torchvision_version": "0.28.0"
+}

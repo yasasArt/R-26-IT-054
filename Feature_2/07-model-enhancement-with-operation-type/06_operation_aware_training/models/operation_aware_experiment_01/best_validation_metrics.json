@@ -1,0 +1,126 @@
+{
+  "epoch": 5,
+  "validation_loss": 0.20405729091796443,
+  "overall": {
+    "accuracy": 0.9668341708542714,
+    "macro_f1": 0.9606667073955215,
+    "weighted_f1": 0.9667872104726057,
+    "sample_count": 995,
+    "per_class": {
+      "IDLE_SETUP": {
+        "precision": 0.9498327759197325,
+        "recall": 0.9403973509933775,
+        "f1": 0.9450915141430948,
+        "support": 302
+      },
+      "SEWING": {
+        "precision": 0.9741379310344828,
+        "recall": 0.9783549783549783,
+        "f1": 0.9762419006479481,
+        "support": 693
+      }
+    },
+    "confusion_matrix": [
+      [
+        284,
+        18
+      ],
+      [
+        15,
+        678
+      ]
+    ]
+  },
+  "by_operation": {
+    "COLLAR": {
+      "accuracy": 0.9728395061728395,
+      "macro_f1": 0.9668627873937267,
+      "weighted_f1": 0.973152241457793,
+      "sample_count": 405,
+      "per_class": {
+        "IDLE_SETUP": {
+          "precision": 0.9173553719008265,
+          "recall": 0.9910714285714286,
+          "f1": 0.9527896995708155,
+          "support": 112
+        },
+        "SEWING": {
+          "precision": 0.9964788732394366,
+          "recall": 0.9658703071672355,
+          "f1": 0.9809358752166378,
+          "support": 293
+        }
+      },
+      "confusion_matrix": [
+        [
+          111,
+          1
+        ],
+        [
+          10,
+          283
+        ]
+      ]
+    },
+    "POCKET": {
+      "accuracy": 0.9770992366412213,
+      "macro_f1": 0.9654808959156784,
+      "weighted_f1": 0.9775578553540716,
+      "sample_count": 131,
+      "per_class": {
+        "IDLE_SETUP": {
+          "precision": 0.896551724137931,
+          "recall": 1.0,
+          "f1": 0.9454545454545454,
+          "support": 26
+        },
+        "SEWING": {
+          "precision": 1.0,
+          "recall": 0.9714285714285714,
+          "f1": 0.9855072463768115,
+          "support": 105
+        }
+      },
+      "confusion_matrix": [
+        [
+          26,
+          0
+        ],
+        [
+          3,
+          102
+        ]
+      ]
+    },
+    "SLEEVE": {
+      "accuracy": 0.9586056644880174,
+      "macro_f1": 0.9539460829614765,
+      "weighted_f1": 0.9581269403585784,
+      "sample_count": 459,
+      "per_class": {
+        "IDLE_SETUP": {
+          "precision": 0.9865771812080537,
+          "recall": 0.8963414634146342,
+          "f1": 0.9392971246006391,
+          "support": 164
+        },
+        "SEWING": {
+          "precision": 0.9451612903225807,
+          "recall": 0.9932203389830508,
+          "f1": 0.9685950413223141,
+          "support": 295
+        }
+      },
+      "confusion_matrix": [
+        [
+          147,
+          17
+        ],
+        [
+          2,
+          293
+        ]
+      ]
+    }
+  }
+}
