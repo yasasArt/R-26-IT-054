@@ -1,3 +1,4 @@
 *.DS_Store
 07-model-enhancement-with-operation-type/06_operation_aware_training/models/operation_aware_experiment_01/best_model.pt
 07-model-enhancement-with-operation-type/06_operation_aware_training/models/operation_aware_experiment_01/last_model.pt
+*.pt

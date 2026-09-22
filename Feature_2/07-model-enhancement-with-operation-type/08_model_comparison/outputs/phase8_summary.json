@@ -1,0 +1,369 @@
+{
+  "status": "PASS",
+  "phase": "Phase 8 - Baseline vs enhanced comparison",
+  "test_dataset": {
+    "clip_count": 1001,
+    "video_count": 9,
+    "state_counts": {
+      "IDLE_SETUP": 306,
+      "SEWING": 695
+    },
+    "operation_counts": {
+      "COLLAR": 325,
+      "POCKET": 327,
+      "SLEEVE": 349
+    }
+  },
+  "baseline": {
+    "architecture": "TemporalMobileNetV3Small",
+    "checkpoint": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/00_protected_baseline/best_model.pt",
+    "checkpoint_epoch": 5,
+    "parameter_count": 1519906,
+    "test_loss": 0.08098586668799093,
+    "overall": {
+      "accuracy": 0.981018981018981,
+      "macro_f1": 0.9775808434619733,
+      "weighted_f1": 0.9809926687417589,
+      "sample_count": 1001,
+      "correct_count": 982,
+      "error_count": 19,
+      "per_class": {
+        "IDLE_SETUP": {
+          "precision": 0.9735973597359736,
+          "recall": 0.9640522875816994,
+          "f1": 0.9688013136288998,
+          "support": 306
+        },
+        "SEWING": {
+          "precision": 0.9842406876790831,
+          "recall": 0.9884892086330935,
+          "f1": 0.9863603732950467,
+          "support": 695
+        }
+      },
+      "confusion_matrix": [
+        [
+          295,
+          11
+        ],
+        [
+          8,
+          687
+        ]
+      ]
+    },
+    "by_operation": {
+      "COLLAR": {
+        "accuracy": 0.9876923076923076,
+        "macro_f1": 0.9849369670003707,
+        "weighted_f1": 0.9877319528821197,
+        "sample_count": 325,
+        "correct_count": 321,
+        "error_count": 4,
+        "per_class": {
+          "IDLE_SETUP": {
+            "precision": 0.9680851063829787,
+            "recall": 0.9891304347826086,
+            "f1": 0.9784946236559139,
+            "support": 92
+          },
+          "SEWING": {
+            "precision": 0.9956709956709957,
+            "recall": 0.9871244635193133,
+            "f1": 0.9913793103448276,
+            "support": 233
+          }
+        },
+        "confusion_matrix": [
+          [
+            91,
+            1
+          ],
+          [
+            3,
+            230
+          ]
+        ]
+      },
+      "POCKET": {
+        "accuracy": 0.9663608562691132,
+        "macro_f1": 0.9530742436695236,
+        "weighted_f1": 0.9661317767415339,
+        "sample_count": 327,
+        "correct_count": 316,
+        "error_count": 11,
+        "per_class": {
+          "IDLE_SETUP": {
+            "precision": 0.9466666666666667,
+            "recall": 0.9102564102564102,
+            "f1": 0.9281045751633987,
+            "support": 78
+          },
+          "SEWING": {
+            "precision": 0.9722222222222222,
+            "recall": 0.9839357429718876,
+            "f1": 0.9780439121756487,
+            "support": 249
+          }
+        },
+        "confusion_matrix": [
+          [
+            71,
+            7
+          ],
+          [
+            4,
+            245
+          ]
+        ]
+      },
+      "SLEEVE": {
+        "accuracy": 0.9885386819484241,
+        "macro_f1": 0.987919695396331,
+        "weighted_f1": 0.9885230114028014,
+        "sample_count": 349,
+        "correct_count": 345,
+        "error_count": 4,
+        "per_class": {
+          "IDLE_SETUP": {
+            "precision": 0.9925373134328358,
+            "recall": 0.9779411764705882,
+            "f1": 0.9851851851851852,
+            "support": 136
+          },
+          "SEWING": {
+            "precision": 0.986046511627907,
+            "recall": 0.9953051643192489,
+            "f1": 0.9906542056074766,
+            "support": 213
+          }
+        },
+        "confusion_matrix": [
+          [
+            133,
+            3
+          ],
+          [
+            1,
+            212
+          ]
+        ]
+      }
+    },
+    "inference": {
+      "elapsed_sec": 93.20398133299022,
+      "clips_per_second": 10.739884559477384
+    }
+  },
+  "enhanced": {
+    "architecture": "OperationAwareTemporalMobileNetV3Small",
+    "checkpoint": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/06_operation_aware_training/models/operation_aware_experiment_01/best_model.pt",
+    "checkpoint_epoch": 5,
+    "overall": {
+      "accuracy": 0.978021978021978,
+      "macro_f1": 0.9742063492063493,
+      "weighted_f1": 0.9780616209187639,
+      "sample_count": 1001,
+      "per_class": {
+        "IDLE_SETUP": {
+          "precision": 0.9580645161290322,
+          "recall": 0.9705882352941176,
+          "f1": 0.9642857142857142,
+          "support": 306
+        },
+        "SEWING": {
+          "precision": 0.9869753979739508,
+          "recall": 0.981294964028777,
+          "f1": 0.9841269841269843,
+          "support": 695
+        }
+      },
+      "confusion_matrix": [
+        [
+          297,
+          9
+        ],
+        [
+          13,
+          682
+        ]
+      ]
+    },
+    "by_operation": {
+      "COLLAR": {
+        "accuracy": 0.9784615384615385,
+        "macro_f1": 0.9738892905921105,
+        "weighted_f1": 0.978629635809679,
+        "sample_count": 325,
+        "per_class": {
+          "IDLE_SETUP": {
+            "precision": 0.9381443298969072,
+            "recall": 0.9891304347826086,
+            "f1": 0.9629629629629629,
+            "support": 92
+          },
+          "SEWING": {
+            "precision": 0.9956140350877193,
+            "recall": 0.9742489270386266,
+            "f1": 0.9848156182212581,
+            "support": 233
+          }
+        },
+        "confusion_matrix": [
+          [
+            91,
+            1
+          ],
+          [
+            6,
+            227
+          ]
+        ]
+      },
+      "POCKET": {
+        "accuracy": 0.963302752293578,
+        "macro_f1": 0.9494902687673772,
+        "weighted_f1": 0.963302752293578,
+        "sample_count": 327,
+        "per_class": {
+          "IDLE_SETUP": {
+            "precision": 0.9230769230769231,
+            "recall": 0.9230769230769231,
+            "f1": 0.9230769230769231,
+            "support": 78
+          },
+          "SEWING": {
+            "precision": 0.9759036144578314,
+            "recall": 0.9759036144578314,
+            "f1": 0.9759036144578314,
+            "support": 249
+          }
+        },
+        "confusion_matrix": [
+          [
+            72,
+            6
+          ],
+          [
+            6,
+            243
+          ]
+        ]
+      },
+      "SLEEVE": {
+        "accuracy": 0.9914040114613181,
+        "macro_f1": 0.9909520640873857,
+        "weighted_f1": 0.9913982172642163,
+        "sample_count": 349,
+        "per_class": {
+          "IDLE_SETUP": {
+            "precision": 0.9925925925925926,
+            "recall": 0.9852941176470589,
+            "f1": 0.988929889298893,
+            "support": 136
+          },
+          "SEWING": {
+            "precision": 0.9906542056074766,
+            "recall": 0.9953051643192489,
+            "f1": 0.9929742388758782,
+            "support": 213
+          }
+        },
+        "confusion_matrix": [
+          [
+            134,
+            2
+          ],
+          [
+            1,
+            212
+          ]
+        ]
+      }
+    },
+    "inference": {
+      "elapsed_sec": 87.78723391699896,
+      "clips_per_second": 11.402569090471914
+    }
+  },
+  "overall_comparison": {
+    "accuracy": {
+      "baseline": 0.981018981018981,
+      "enhanced": 0.978021978021978,
+      "difference": -0.0029970029970030065
+    },
+    "macro_f1": {
+      "baseline": 0.9775808434619733,
+      "enhanced": 0.9742063492063493,
+      "difference": -0.003374494255623972
+    },
+    "weighted_f1": {
+      "baseline": 0.9809926687417589,
+      "enhanced": 0.9780616209187639,
+      "difference": -0.0029310478229950254
+    },
+    "error_count": {
+      "baseline": 19,
+      "enhanced": 22
+    }
+  },
+  "per_operation_comparison": {
+    "COLLAR": {
+      "sample_count": 325,
+      "baseline_accuracy": 0.9876923076923076,
+      "enhanced_accuracy": 0.9784615384615385,
+      "accuracy_difference": -0.009230769230769154,
+      "baseline_macro_f1": 0.9849369670003707,
+      "enhanced_macro_f1": 0.9738892905921105,
+      "macro_f1_difference": -0.01104767640826021
+    },
+    "POCKET": {
+      "sample_count": 327,
+      "baseline_accuracy": 0.9663608562691132,
+      "enhanced_accuracy": 0.963302752293578,
+      "accuracy_difference": -0.003058103975535187,
+      "baseline_macro_f1": 0.9530742436695236,
+      "enhanced_macro_f1": 0.9494902687673772,
+      "macro_f1_difference": -0.0035839749021464584
+    },
+    "SLEEVE": {
+      "sample_count": 349,
+      "baseline_accuracy": 0.9885386819484241,
+      "enhanced_accuracy": 0.9914040114613181,
+      "accuracy_difference": 0.002865329512893977,
+      "baseline_macro_f1": 0.987919695396331,
+      "enhanced_macro_f1": 0.9909520640873857,
+      "macro_f1_difference": 0.003032368691054721
+    }
+  },
+  "paired_prediction_comparison": {
+    "both_correct": 977,
+    "baseline_only_correct": 5,
+    "enhanced_only_correct": 2,
+    "both_wrong": 17,
+    "net_correct_prediction_gain": -3,
+    "discordant_prediction_count": 7,
+    "exact_mcnemar_p_value": 0.453125,
+    "significance_result": "NO_STATISTICALLY_SIGNIFICANT_CLIP_LEVEL_DIFFERENCE"
+  },
+  "result": {
+    "primary_metric": "macro_f1",
+    "metric_winner": "BASELINE_MODEL",
+    "note": "The operation-aware model should only be accepted as an improvement after considering overall metrics, per-operation metrics, paired predictions, inference speed, and the practical need to provide operation_type."
+  },
+  "checks": {
+    "baseline_checkpoint_loaded": "PASS",
+    "same_test_clip_count": "PASS",
+    "same_clip_names": "PASS",
+    "same_true_labels": "PASS",
+    "same_operation_labels": "PASS",
+    "all_baseline_clips_evaluated": "PASS"
+  },
+  "outputs": {
+    "baseline_metrics": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/08_model_comparison/outputs/baseline_test_metrics.json",
+    "baseline_predictions": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/08_model_comparison/outputs/baseline_test_predictions.csv",
+    "overall_comparison": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/08_model_comparison/outputs/overall_model_comparison.csv",
+    "per_operation_comparison": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/08_model_comparison/outputs/per_operation_comparison.csv",
+    "paired_prediction_comparison": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/08_model_comparison/outputs/paired_prediction_comparison.csv"
+  }
+}
