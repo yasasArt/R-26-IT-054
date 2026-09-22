@@ -1,0 +1,39 @@
+{
+  "status": "PASS",
+  "phase": "Phase 9 - Final model selection and deployment contract",
+  "decision": {
+    "selected_model": "BASELINE_MODEL",
+    "selected_model_id": "baseline_temporal_mobilenet_v3_small",
+    "selected_architecture": "TemporalMobileNetV3Small",
+    "selected_checkpoint": "00_protected_baseline/best_model.pt",
+    "operation_aware_model_selected": false,
+    "reason": "The baseline model achieved higher test accuracy, higher macro-F1, lower test loss, and fewer test errors. The paired prediction difference was not statistically significant. Therefore, the simpler baseline model remains the selected deployment model."
+  },
+  "operation_type_decision": {
+    "kept_in_dataset": true,
+    "kept_in_session": true,
+    "used_as_classifier_input": false,
+    "used_for_estimated_cycle_time": true,
+    "used_for_reporting": true
+  },
+  "evidence": {
+    "baseline_accuracy": 0.981018981018981,
+    "enhanced_accuracy": 0.978021978021978,
+    "baseline_macro_f1": 0.9775808434619733,
+    "enhanced_macro_f1": 0.9742063492063493,
+    "baseline_error_count": 19,
+    "enhanced_error_count": 22,
+    "mcnemar_p_value": 0.453125
+  },
+  "checks": {
+    "phase_8_passed": "PASS",
+    "phase_8_checks_passed": "PASS",
+    "baseline_checkpoint_exists": "PASS",
+    "deployment_config_created": "PASS",
+    "experiment_conclusion_created": "PASS"
+  },
+  "outputs": {
+    "deployment_model_config": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/09_model_selection/outputs/deployment_model_config.json",
+    "experiment_conclusion": "/Users/nuwandharmarathna/Desktop/R-26-IT-054/Feature_2/07-model-enhancement-with-operation-type/09_model_selection/outputs/experiment_conclusion.md"
+  }
+}
