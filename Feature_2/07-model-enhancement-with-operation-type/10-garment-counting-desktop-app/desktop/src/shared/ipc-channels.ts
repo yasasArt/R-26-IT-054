@@ -1,0 +1,17 @@
+export const IPC_CHANNELS = {
+  appInfo: "desktop:app-info",
+  readiness: "desktop:readiness",
+  backendStatus: "backend:status",
+  backendRequest: "backend:request",
+  exportAnalytics: "analytics:export-excel",
+  selectValidationVideo: "vision:select-validation-video",
+  liveStreamUrl: "vision:live-stream-url",
+  iotDiscoveredDevices: "iot:discovered-devices",
+  iotSelectDevice: "iot:select-device",
+  iotCancelSelection: "iot:cancel-device-selection",
+  iotConnection: "iot:connection-state",
+  iotHardwareEvent: "iot:hardware-event",
+  minimizeWindow: "window:minimize",
+  toggleMaximizeWindow: "window:toggle-maximize",
+  closeWindow: "window:close",
+} as const;
