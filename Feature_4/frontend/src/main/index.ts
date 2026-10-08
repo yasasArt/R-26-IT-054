@@ -211,20 +211,20 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(async () => {
-  electronApp.setAppUserModelId('com.threadscan.app')
+// app.whenReady().then(async () => {
+//   electronApp.setAppUserModelId('com.threadscan.app')
 
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
+//   app.on('browser-window-created', (_, window) => {
+//     optimizer.watchWindowShortcuts(window)
+//   })
 
-  await ensureManagedProcessesRunning()
-  createWindow()
+//   await ensureManagedProcessesRunning()
+//   createWindow()
 
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-})
+//   app.on('activate', function () {
+//     if (BrowserWindow.getAllWindows().length === 0) createWindow()
+//   })
+// })
 
 app.on('window-all-closed', () => {
   stopManagedProcesses()
