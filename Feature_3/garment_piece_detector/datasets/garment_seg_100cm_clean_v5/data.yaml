@@ -1,0 +1,9 @@
+path: C:/Users/wgucg/Documents/GitHub/R-26-IT-054/Feature_3/garment_piece_detector/datasets/garment_seg_100cm_clean_v5
+
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 1
+names:
+  0: new-garment
