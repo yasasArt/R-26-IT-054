@@ -35,7 +35,11 @@ Feature_3/01_video_annotation/dataset_v2_fixed_height
 Feature_3/01_video_annotation/extracted_frames
 Feature_3/01_video_annotation/shuffled videos
 Feature_3/02_model_development/best_frame_dataset
-Feature_3/garment_piece_detector/dataset/
 Feature_3/garment_piece_detector/dataset_v2_adaptation
 *.jpg
 Feature_3/garment_piece_detector/datasets/garment_seg_100cm_clean_v5/test/images
+Feature_3/garment_piece_detector/training_results
+Feature_3/garment_piece_detector/experiment_results
+Feature_3/garment_piece_detector/dataset/
+Feature_3/garment_piece_detector/datasets/
+Feature_3/garment_piece_detector/datasets/garment_seg_100cm_clean_v5
