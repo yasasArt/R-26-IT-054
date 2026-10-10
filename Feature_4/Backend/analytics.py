@@ -45,9 +45,9 @@ def scheduled_hours_per_day(settings: dict) -> float:
     return max(0.0, total_minutes / 60.0)
 
 
-# def fixed_break_hours_per_day(settings: dict) -> float:
-#     total_minutes = sum(b["duration_minutes"] for b in settings.get("breaks", []))
-#     return total_minutes / 60.0
+def fixed_break_hours_per_day(settings: dict) -> float:
+    total_minutes = sum(b["duration_minutes"] for b in settings.get("breaks", []))
+    return total_minutes / 60.0
 
 
 def downtime_hours_for_day(day: date, until: datetime = None) -> float:
