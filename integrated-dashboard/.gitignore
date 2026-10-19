@@ -1,0 +1,33 @@
+# Node / Electron
+frontend/node_modules/
+frontend/.webpack/
+frontend/.build-check/
+frontend/out/
+frontend/release/
+frontend/coverage/
+frontend/*.tsbuildinfo
+
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/.pytest_cache/
+backend/**/*.pyc
+backend/**/__pycache__/
+backend/**/*.egg-info/
+
+# Local data and secrets
+.env
+.env.*
+!.env.example
+data/
+logs/
+*.db
+*.sqlite
+!backend/garment-rework-backend/data/
+!backend/garment-rework-backend/data/garment_data.db
+!backend/garment-size-backend/data/
+!backend/garment-size-backend/data/garment_measurements.db
+
+# Operating-system files
+.DS_Store
+Thumbs.db

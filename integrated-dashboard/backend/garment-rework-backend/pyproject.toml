@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "garment-rework-backend"
+version = "1.0.0"
+description = "Garment good/rework counting API, SQLite storage and YOLO tracking"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+  "opencv-python>=4.10,<5",
+  "ultralytics>=8.3,<9",
+  "supervision>=0.25,<1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+release = ["pyinstaller>=6.12,<7"]
+
+[tool.setuptools]
+py-modules = ["main"]

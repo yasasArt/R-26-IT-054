@@ -1,0 +1,8 @@
+# One shared Python environment for all four independent feature backends.
+# Keep the native camera runtime reproducible across Windows presentation machines.
+# Newer unvalidated OpenCV wheels can change capture backend behaviour/device order.
+opencv-python==4.11.0.86
+-e ./garment-counter-backend[dev,release]
+-e ./garment-rework-backend[dev,release]
+-e ./garment-style-colour-backend[dev,release]
+-e ./garment-size-backend[dev,release]

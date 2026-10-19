@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "selected_model": {
+    "model_id": "baseline_temporal_mobilenet_v3_small",
+    "architecture": "TemporalMobileNetV3Small",
+    "checkpoint_filename": "best_model.pt",
+    "checkpoint_sha256": "3ff6fc9fa091887092fcf99a83252567d0e7d9687a3d20574dadecf1e5226c72",
+    "classes": [
+      "IDLE_SETUP",
+      "SEWING"
+    ],
+    "frames_per_clip": 8,
+    "input_size": 224,
+    "requires_operation_type": false
+  },
+  "phase8_test_result": {
+    "accuracy": 0.981019,
+    "macro_f1": 0.977581,
+    "error_count": 19,
+    "selection_reason": "The operation-aware experiment did not significantly outperform this baseline."
+  },
+  "operation_context": {
+    "session_requires_operation_type": true,
+    "allowed_operation_types": [
+      "COLLAR",
+      "POCKET",
+      "SLEEVE"
+    ],
+    "used_as_model_input": false,
+    "used_for_cycle_time_benchmarking": true,
+    "used_for_reporting": true
+  },
+  "cycle_time_status": {
+    "WITHIN_ESTIMATE": "actual_cycle_time_sec <= estimated_cycle_time_sec",
+    "OVER_ESTIMATE": "actual_cycle_time_sec > estimated_cycle_time_sec"
+  }
+}

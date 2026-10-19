@@ -1,0 +1,2 @@
+# Optional alternative to: pip install -e ".[dev,release]"
+-e .

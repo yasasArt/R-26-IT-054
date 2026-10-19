@@ -1,0 +1,372 @@
+@scope (.garment-size-module) {
+/* Live scanner dashboard layout for Windows, macOS and Linux. */
+.production-panel {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.prediction-panel {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.live-scanner-panel {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chart-panel {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.completion-panel {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.scanner-heading {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e7edf4;
+}
+
+.scanner-title,
+.scanner-controls,
+.scanner-controls label {
+  display: flex;
+  align-items: center;
+}
+
+.scanner-title {
+  gap: 11px;
+  min-width: 0;
+}
+
+.scanner-title > span {
+  width: 37px;
+  height: 37px;
+  flex: 0 0 37px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #087ca1;
+  background: #dff7fd;
+}
+
+.scanner-title h2 {
+  margin: 0;
+  color: #182844;
+  font-size: 15px;
+}
+
+.scanner-title p {
+  margin: 5px 0 0;
+  color: #8794a7;
+  font-size: 10px;
+}
+
+.scanner-controls {
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.scanner-controls label {
+  gap: 6px;
+  max-width: 220px;
+  padding: 7px 9px;
+  border: 1px solid #dce6f0;
+  border-radius: 8px;
+  color: #718299;
+  background: #f8fafc;
+}
+
+.scanner-controls select {
+  min-width: 0;
+  max-width: 175px;
+  border: 0;
+  outline: 0;
+  color: #334861;
+  background: transparent;
+  font-size: 9px;
+}
+
+.scanner-state {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.35px;
+}
+
+.scanner-state.ready {
+  color: #087b58;
+  background: #dcf8ed;
+}
+
+.scanner-state.waiting {
+  color: #936000;
+  background: #fff2d6;
+}
+
+.scanner-state.error {
+  color: #b8373d;
+  background: #fee7e9;
+}
+
+.scanner-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(205px, 0.72fr);
+  gap: 14px;
+  padding: 14px;
+  background: #f7f9fc;
+}
+
+.scanner-preview {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  background: #071426;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.scanner-preview video,
+.scanner-preview img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #071426;
+}
+
+.scanner-preview img {
+  z-index: 2;
+}
+
+.scanner-preview canvas {
+  display: none;
+}
+
+.detection-zone {
+  position: absolute;
+  z-index: 4;
+  inset: 4%;
+  pointer-events: none;
+  border: 2px dashed #00c8ec;
+  border-radius: 9px;
+  box-shadow: 0 0 0 999px rgba(1, 13, 28, 0.05);
+}
+
+.detection-zone span {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  color: #032c3d;
+  background: #08cbea;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.automatic-chip {
+  position: absolute;
+  z-index: 5;
+  top: 11px;
+  right: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #053f2e;
+  background: #1bd39b;
+  font-size: 8px;
+}
+
+.automatic-chip span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+.preview-message {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 30px;
+  text-align: center;
+  color: #d6e6f7;
+  background: rgba(5, 17, 32, 0.82);
+  font-size: 10px;
+}
+
+.scanner-measurements {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid #dfe7f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.measurement-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #e8eef5;
+}
+
+.measurement-top span {
+  color: #74869d;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.55px;
+}
+
+.measurement-top strong {
+  min-width: 38px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  text-align: center;
+  color: #047b58;
+  background: #dcf8ed;
+  font-size: 17px;
+}
+
+.measurement-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.measurement-grid div {
+  min-width: 0;
+  padding: 9px;
+  border-radius: 7px;
+  background: #f4f7fb;
+}
+
+.measurement-grid span,
+.measurement-grid strong {
+  display: block;
+}
+
+.measurement-grid span {
+  color: #8190a4;
+  font-size: 7px;
+}
+
+.measurement-grid strong {
+  margin-top: 4px;
+  overflow: hidden;
+  color: #263b56;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+.stable-progress > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: #718198;
+  font-size: 8px;
+}
+
+.stable-progress > div:last-child {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7edf4;
+}
+
+.stable-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #16bdda, #18bf89);
+  transition: width 0.2s ease;
+}
+
+.scanner-message,
+.scanner-error {
+  margin: auto 0 0;
+  padding: 9px;
+  border-radius: 7px;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.scanner-message {
+  color: #50677f;
+  background: #eef6fc;
+}
+
+.scanner-error {
+  color: #a72d35;
+  background: #ffebed;
+}
+
+@media (max-width: 1180px) {
+  .production-panel,
+  .prediction-panel,
+  .live-scanner-panel,
+  .chart-panel,
+  .completion-panel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .scanner-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .scanner-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .scanner-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 500px) {
+  .scanner-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scanner-controls label,
+  .scanner-controls select {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+}
