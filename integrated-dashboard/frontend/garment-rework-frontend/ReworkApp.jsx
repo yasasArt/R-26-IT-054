@@ -88,7 +88,7 @@ function App({ onExit }) {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-8">
-          {/* මෙතනින් තමයි Unmount වෙන එක නතර කරලා Hide/Show කරන්නේ */}
+          
           <div className={activeTab === 'Live production' ? 'block h-full' : 'hidden'}>
             <LiveProduction />
           </div>

@@ -8,7 +8,7 @@ export default function Analysis() {
   const [sessionList, setSessionList] = useState([]); 
   const [reworkTime, setReworkTime] = useState(2.0); // Rework Time එක සඳහා අලුත් State එක
 
-  // දැනට දුවන Session එකේ දත්ත ලබා ගැනීම
+  
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
@@ -24,7 +24,7 @@ export default function Analysis() {
     return () => clearInterval(interval);
   }, []);
 
-  // පරණ Sessions වල සාරාංශය ලබා ගැනීම
+  
   useEffect(() => {
     const fetchSessions = async () => {
       try {
@@ -52,7 +52,7 @@ export default function Analysis() {
     a.click();
   };
 
-  // CSV එකටත් Delay Time එක එකතු කර ඇත
+
   const handleDownloadSessionsCSV = () => {
     if (sessionList.length === 0) return;
     const headers = "Session ID,Total Checked,Good,Rework,Pass Rate (%),Total Delay (Mins),Start Time,End Time\n";
@@ -179,7 +179,7 @@ export default function Analysis() {
             </h3>
             
             <div className="flex items-center gap-4">
-              {/* Rework Time එක වෙනස් කරන Input එක */}
+              
               <div className="flex items-center gap-2 bg-surface px-2 py-1 rounded-md border border-line">
                 <Clock size={12} className="text-status-warning" />
                 <label className="text-[10px] font-bold text-ink-secondary whitespace-nowrap">Avg Fix (Mins):</label>
@@ -226,7 +226,7 @@ export default function Analysis() {
                           {session.pass_rate}%
                         </span>
                       </td>
-                      {/* මෙතන තමයි Rework ගාණෙන් Rework Time එක ගුණ කරලා පෙන්වන්නේ */}
+                      
                       <td className="py-2.5 px-4 text-sm text-center font-black text-status-warning">
                         {(session.rework * reworkTime).toFixed(1)}m
                       </td>
