@@ -43,3 +43,5 @@ Feature_3/garment_piece_detector/experiment_results
 Feature_3/garment_piece_detector/dataset/
 Feature_3/garment_piece_detector/datasets/
 Feature_3/garment_piece_detector/datasets/garment_seg_100cm_clean_v5
+
+integrated-dashboard/models/
