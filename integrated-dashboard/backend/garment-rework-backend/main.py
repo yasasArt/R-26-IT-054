@@ -23,7 +23,6 @@ MODEL_PATH = Path(os.environ.get("GARMENT_REWORK_MODEL_PATH", BACKEND_DIRECTORY 
 def init_db():
     conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
-    # session_id තීරුව අලුතින් එක් කර ඇත
     c.execute('''
         CREATE TABLE IF NOT EXISTS inspections (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,7 +52,7 @@ class AppState:
     def __init__(self):
         self.running = False
         self.cap = None
-        self.current_session_id = None # අලුත් Session ID එක රඳවා ගැනීමට
+        self.current_session_id = None # New Session ID
         
         self.good_count = 0
         self.rework_count = 0
@@ -128,7 +127,7 @@ def start_inspection(req: StartRequest):
         if not state.cap.isOpened():
             return {"status": "error", "message": "Could not open video source"}
             
-        state.byte_tracker = sv.ByteTrack(track_activation_threshold=0.20, lost_track_buffer=120)
+        state.byte_tracker = sv.ByteTrack()
         state.track_states = {}
         state.good_count = 0
         state.rework_count = 0
@@ -136,7 +135,7 @@ def start_inspection(req: StartRequest):
         state.history = []
         state.frame_idx = 0
         
-        # අලුත් Session එකක් ආරම්භ කිරීම (උදා: SESSION_20260827_231020)
+        
         state.current_session_id = f"SESSION_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
         state.conf_threshold = req.conf_threshold
@@ -173,14 +172,14 @@ def stop_inspection():
 
 @app.get("/metrics")
 def get_metrics():
-    # Session එකක් පටන් අරන් නැත්නම් බිංදුව පෙන්වන්න
+    
     if not state.current_session_id:
         return {"good": 0, "rework": 0, "history": [], "log": []}
 
     conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     
-    # දැනට දුවන Session එකේ දත්ත පමණක් ලබා ගැනීම
+    # Get data for the current session only
     c.execute("SELECT COUNT(*) FROM inspections WHERE verdict='Good' AND session_id=?", (state.current_session_id,))
     good_count = c.fetchone()[0]
     
@@ -208,7 +207,7 @@ def log_verdict(tid, verdict):
     else:
         state.rework_count += 1
         
-    # අදාළ Session එක යටතේ Database එකට සුරැකීම
+    # Get data for the current session only
     if state.current_session_id:
         conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
@@ -302,7 +301,7 @@ def generate_frames():
 
         state.frame_idx += 1 + skipped
         
-        # Chart එකට දත්ත ලබා දීම (DB එක Load කරන්නේ නැතිව කෙලින්ම State එකෙන් දෙන නිසා ලැග් වෙන්නේ නෑ)
+        
         state.history.append({
             "frame": state.frame_idx,
             "good": state.good_count,
@@ -328,7 +327,6 @@ def get_all_sessions():
     conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     
-    # හැම Session එකක්ම Group කරලා Good/Rework වෙන වෙනම ගණන් කරනවා
     c.execute('''
         SELECT 
             session_id,
