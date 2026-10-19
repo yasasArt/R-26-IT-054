@@ -1,10 +1,10 @@
 import { buildCycleChartData } from "../../shared/chart-data";
-import type { PieceEvent, TargetPoint } from "../../shared/types";
+import type { PieceEvent } from "../../shared/types";
 import { formatNumber } from "../lib/format";
 import { EmptyState } from "./OperatorUi";
 
-const WIDTH = 500;
-const HEIGHT = 235;
+const WIDTH = 940;
+const HEIGHT = 270;
 const LEFT = 44;
 const RIGHT = 16;
 const TOP = 18;
@@ -58,7 +58,7 @@ export function CycleTimeChart({
 
   return (
     <>
-      <svg className="production-chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Cycle time in seconds for every completed garment">
+      <svg className="production-chart cycle-chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Cycle time in seconds for every completed garment">
         <Grid maximum={maximum} />
         {estimatedCycleTime !== null ? (
           <g>
@@ -114,46 +114,6 @@ export function CycleTimeChart({
         </span>
         <strong>Average {formatNumber(average, 1)} sec</strong>
       </div>
-    </>
-  );
-}
-
-export function TargetCountdownChart({ points, target }: { points: TargetPoint[]; target: number }) {
-  const maximum = Math.max(target, 1);
-  const innerWidth = WIDTH - LEFT - RIGHT;
-  const horizontalSpan = Math.max(points.length - 1, 4);
-  let stepPath = `M ${LEFT} ${chartY(points[0]?.remaining_pieces ?? target, maximum)}`;
-
-  for (let index = 1; index < points.length; index += 1) {
-    const x = LEFT + (index / horizontalSpan) * innerWidth;
-    const y = chartY(points[index].remaining_pieces, maximum);
-    stepPath += ` H ${x} V ${y}`;
-  }
-
-  const lastX = LEFT + ((points.length - 1) / horizontalSpan) * innerWidth;
-  const remaining = points.at(-1)?.remaining_pieces ?? target;
-
-  return (
-    <>
-      <svg className="production-chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Remaining target pieces decreasing after each completed garment">
-        <Grid maximum={maximum} />
-        <path d={stepPath} className="target-step-line" />
-        {points.map((point, index) => {
-          const x = LEFT + (index / horizontalSpan) * innerWidth;
-          const y = chartY(point.remaining_pieces, maximum);
-          return (
-            <g key={`${point.piece_number}-${index}`}>
-              <circle cx={x} cy={y} r={4} className="target-step-marker" />
-              {(points.length < 13 || index % Math.ceil(points.length / 10) === 0) ? (
-                <text x={x} y={HEIGHT - 13} textAnchor="middle" className="chart-axis-label">{point.piece_number}</text>
-              ) : null}
-              <title>{`${point.piece_number} completed · ${point.remaining_pieces} remaining`}</title>
-            </g>
-          );
-        })}
-        <circle cx={lastX} cy={chartY(remaining, maximum)} r={6} className="target-step-final" />
-      </svg>
-      <div className="chart-footer"><span>Target {formatNumber(target)} pieces</span><strong>{formatNumber(remaining)} remaining</strong></div>
     </>
   );
 }
