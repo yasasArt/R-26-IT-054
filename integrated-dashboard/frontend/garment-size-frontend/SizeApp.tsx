@@ -50,33 +50,19 @@ import {
 } from "@garment-size/components/ui/native-select";
 import "./live-scanner.css";
 
-/*
- * ================================================================
- * THREADSCAN FRONTEND - CROSS-PLATFORM MAIN DASHBOARD FILE
- * ================================================================
- *
- * මේ file එකේ ප්‍රධාන වැඩ 4ක් තියෙනවා:
- * 1. Backend එකෙන් health, count සහ measurement data ලබාගැනීම.
- * 2. Camera frame එක backend /measure endpoint එකට යැවීම.
- * 3. Order/session data backend SQLite database එකේ save කිරීම.
- * 4. Dashboard, History, Analytics සහ Downtime cards render කිරීම.
- */
 
-// -------------------- Backend සහ scanner settings --------------------
-
-// Python FastAPI backend එක run වන address එක.
 const API_URL = "http://127.0.0.1:8000";
 
-// Camera එකෙන් අලුත් frame එකක් scan කරන interval එක milliseconds වලින්.
+
 const SCAN_INTERVAL_MS = 300;
 
-// Backend එකට upload කරන image width එක. Aspect ratio එක වෙනස් කරන්නේ නැහැ.
+
 const CAPTURE_MAX_WIDTH = 1280;
 
-// JPEG quality අගය. 0.82 නිසා quality සහ speed දෙක balance වෙනවා.
+
 const JPEG_QUALITY = 0.82;
 
-// System එක count කරන garment sizes.
+
 const SIZES = ["S", "M", "L", "XL"] as const;
 
 // -------------------- TypeScript data models --------------------
@@ -155,14 +141,13 @@ type LiveMeasurement = {
   } | null;
 };
 
-// -------------------- Default values සහ localStorage keys --------------------
 
-// Reset/default size counts. Object copy කර භාවිත කරන නිසා original එක වෙනස් නොවේ.
+
+
 const ZERO: Counts = { S: 0, M: 0, L: 0, XL: 0 };
 const today = () => new Date().toISOString().slice(0, 10);
 
-// සෑම අලුත් order form එකකටම අලුත් object එකක් ලබාදෙයි. මෙය පෙර order
-// එකේ order ID, dates, targets හෝ breaks අලුත් form එකට leak වීම නවත්වයි.
+
 function createInitialSchedule(): Schedule {
   const currentDate = today();
   return {
@@ -181,7 +166,7 @@ function createInitialSchedule(): Schedule {
   };
 }
 
-// Browser localStorage එකේ data save කරන key names.
+
 const STORE = {
   legacySchedule: "threadscan-schedule-v2",
   legacySessions: "threadscan-sessions-v2",
@@ -191,20 +176,14 @@ const STORE = {
 
 // -------------------- Backend helper functions --------------------
 
-/**
- * Backend GET request එකක් යවයි.
- * Electron app එකේදී secure IPC bridge එක භාවිත කරයි.
- * Normal browser එකේදී fetch() භාවිත කරයි.
- */
+
 async function apiGet(pathname: string): Promise<unknown> {
-  // Electron requests go through the preload IPC bridge. This avoids browser
-  // CORS restrictions while keeping Node APIs out of the renderer process.
+ 
   if (window.garmentDesktop?.sizeApiGet) {
     try {
       return await window.garmentDesktop.sizeApiGet(pathname);
     } catch (error) {
-      // Electron IPC request එක fail වුණොත් පහළ තිබෙන normal HTTP fetch
-      // request එක භාවිත කිරීමට ඉඩ දෙයි.
+      
       console.warn(
         `Electron IPC failed for ${pathname}. Trying direct backend request.`,
         error,
@@ -242,7 +221,7 @@ async function apiGet(pathname: string): Promise<unknown> {
   }
 }
 
-/** SQLite-backed order/count mutations සඳහා Electron IPC හෝ browser fetch භාවිත කරයි. */
+
 async function apiMutation<T>(
   method: "POST" | "DELETE",
   pathname: string,
@@ -289,11 +268,7 @@ async function persistOrder(session: ProductionSession): Promise<ProductionSessi
   return response.order;
 }
 
-/**
- * Camera image එක backend /measure endpoint එකට යවයි.
- * Packaged Electron app එකේ IPC භාවිත කරන නිසා Windows/macOS/Linux
- * file:// CORS differences scanner එකට බලපාන්නේ නැහැ.
- */
+
 async function apiMeasure(
   image: Blob,
   garmentType: string,
@@ -329,7 +304,7 @@ async function apiMeasure(
 
   return payload;
 }
-/** S/M/L/XL values අනිවාර්යයෙන් number බවට normalize කරයි. */
+
 function counts(value: Partial<Counts> = {}): Counts {
   return {
     S: Number(value.S) || 0,
@@ -338,7 +313,7 @@ function counts(value: Partial<Counts> = {}): Counts {
     XL: Number(value.XL) || 0,
   };
 }
-/** Backend object එකක size keys තිබේදැයි පරීක්ෂා කරයි. */
+
 function hasSizes(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const row = value as Record<string, unknown>;
@@ -346,10 +321,7 @@ function hasSizes(value: unknown): value is Record<string, unknown> {
     (size) => row[size] !== undefined || row[size.toLowerCase()] !== undefined,
   );
 }
-/**
- * Backend /counts response formats කිහිපයක් support කරලා
- * අවසානයේ එකම { S, M, L, XL } format එකක් return කරයි.
- */
+
 function normalizeCounts(payload: unknown, garmentType: string): Counts {
   if (!payload || typeof payload !== "object") return counts();
   const root = payload as Record<string, unknown>;
@@ -384,7 +356,7 @@ function normalizeCounts(payload: unknown, garmentType: string): Counts {
   }
   return counts();
 }
-/** UI garment name එක backend එක බලාපොරොත්තු වන name එකට map කරයි. */
+
 function backendGarmentType(garmentType: string): string | null {
   const normalized = garmentType.toLowerCase().replace(/[^a-z]/g, "");
   if (normalized === "tshirt") return "tshirt";
@@ -392,19 +364,15 @@ function backendGarmentType(garmentType: string): string | null {
   if (normalized === "trouser" || normalized === "trousers") return "trouser";
   return null;
 }
-/** Size හතරේම එකතුව ලබාදෙයි. */
+
 function total(value: Counts) {
   return SIZES.reduce((sum, size) => sum + value[size], 0);
 }
-/** Count objects දෙක සමානද කියා බලයි. */
+
 function sameCounts(a: Counts, b: Counts) {
   return SIZES.every((size) => a[size] === b[size]);
 }
-/**
- * Backend එකේ global count එකෙන් current session count එක වෙන් කරයි.
- * baselineCounts = session එක start කළ මොහොතේ backend count එක.
- * carriedCounts = pause කිරීමට පෙර session එකේ තිබුණු count එක.
- */
+
 function liveSessionCounts(
   session: ProductionSession | null,
   raw: Counts,
@@ -418,17 +386,17 @@ function liveSessionCounts(
   });
   return result;
 }
-/** 08:00 වැනි time දෙකක් අතර minutes ගණන ලබාදෙයි. */
+
 function minutesBetween(start: string, end: string) {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
   return Math.max(0, eh * 60 + em - sh * 60 - sm);
 }
-/** ISO date/time දෙකක් අතර elapsed minutes ලබාදෙයි. */
+
 function elapsedMinutes(from: string, to = new Date().toISOString()) {
   return Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 60000));
 }
-/** Decimal hours අගය "2h 15m" ලෙස පෙන්වීමට format කරයි. */
+
 function formatDuration(hours: number) {
   if (!Number.isFinite(hours) || hours < 0) return "--";
   const value = Math.round(hours * 60);
@@ -448,7 +416,7 @@ function niceScale(maxValue: number, targetTicks = 4) {
   for (let tick = 0; tick <= max; tick += roundedStep) ticks.push(tick);
   return { max, ticks };
 }
-/** ISO date/time එක user-friendly date/time එකක් කරයි. */
+
 function formatDateTime(value?: string) {
   if (!value) return "--";
   return new Date(value).toLocaleString("en-GB", {
@@ -459,7 +427,7 @@ function formatDateTime(value?: string) {
     minute: "2-digit",
   });
 }
-/** History page එකේ session එක CSV file එකක් ලෙස download කරයි. */
+
 function downloadCsv(session: ProductionSession) {
   const rows: (string | number)[][] = [
     ["Session ID", session.id],
@@ -513,7 +481,7 @@ function downloadCsv(session: ProductionSession) {
 
 // -------------------- Reusable UI components --------------------
 
-/** Left sidebar එකේ THREADSCAN logo area එක. */
+
 function AppLogo() {
   return (
     <div className="brand">
@@ -534,10 +502,6 @@ const primaryNav = [
   { label: "Production Analytics", icon: BarChart3, page: "analytics" as Page },
 ];
 
-/**
- * Sidebar navigation එක.
- * setPage() මගින් URL reload නොකර requested page component එක පෙන්වයි.
- */
 function Sidebar({
   page,
   setPage,
@@ -610,7 +574,7 @@ function Sidebar({
     </>
   );
 }
-/** Page title, current date සහ backend connection status පෙන්වයි. */
+
 function Header({ title, online }: { title: string; online: boolean }) {
   const now = new Date();
   return (
@@ -640,7 +604,7 @@ function Header({ title, online }: { title: string; online: boolean }) {
     </header>
   );
 }
-/** Dashboard ඉහළ ඇති small KPI card එකක් render කරයි. */
+
 function Kpi({
   label,
   value,
@@ -667,7 +631,7 @@ function Kpi({
     </article>
   );
 }
-/** Form label සහ input/select එක එකම consistent layout එකට දමයි. */
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="form-field">
@@ -676,7 +640,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
     </label>
   );
 }
-/** History/Analytics/Downtime page summary card එකක් render කරයි. */
+
 function SummaryStat({
   label,
   value,
@@ -697,10 +661,7 @@ function SummaryStat({
 
 // -------------------- Live Automatic Scanning card --------------------
 
-/**
- * Camera එක start කර frame capture කරයි.
- * Frame එක /measure endpoint එකට යවා stable result එක UI එකේ පෙන්වයි.
- */
+
 function LiveScanner({
   garmentType,
   online,
@@ -710,37 +671,37 @@ function LiveScanner({
   online: boolean;
   active: boolean;
 }) {
-  // <video> element එකෙන් live camera view එක ලබාගන්න ref එක.
+  
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Video frame එක JPEG image එකක් බවට හරවන hidden canvas එක.
+  
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // එක request එකක් යන අතරතුර තවත් request එකක් යාම නවත්වයි.
+  
   const processingRef = useRef(false);
 
-  // Computer එකේ available cameras list එක.
+  
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
 
-  // User select කර ඇති Logitech/other camera device id එක.
+  
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
 
-  // Camera සහ scanning UI states.
+  
   const [cameraReady, setCameraReady] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [scanError, setScanError] = useState("");
 
-  // Backend එකෙන් ලැබුණු අලුත්ම measurement response එක.
+  
   const [result, setResult] = useState<LiveMeasurement | null>(null);
 
-  // Stable measurement එකේ mask/width/height lines ඇති image එක.
+  
   const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
 
-  // UI garment type එක backend-compatible value එකක් බවට පත් කරයි.
+  
   const backendType = backendGarmentType(garmentType);
 
-  // Component එක open වූ විට හෝ camera selection වෙනස් වූ විට camera start කරයි.
+  
   useEffect(() => {
     let cancelled = false;
     let stream: MediaStream | null = null;
@@ -798,7 +759,7 @@ function LiveScanner({
     };
   }, [selectedDeviceId]);
 
-  /** Live video එකෙන් එක් frame එකක් capture කර backend එකට යවයි. */
+  
   const scanFrame = useCallback(async () => {
     // Measurement must remain active even before an order is created. The
     // session baseline logic below decides which backend counts belong to a
@@ -841,8 +802,7 @@ function LiveScanner({
         );
       });
 
-      // Browser development එකේ fetch සහ packaged desktop app එකේ secure
-      // Electron IPC භාවිත කර එකම measurement response එක ලබාගනී.
+      
       const payload = await apiMeasure(blob, backendType);
 
       setResult(payload);
@@ -850,7 +810,7 @@ function LiveScanner({
       const trackingState = payload.tracking_state || payload.state;
       const stableCount = Number(payload.stable_count) || 0;
       const stableRequired = Number(payload.stable_required) || 3;
-      // Required stable frames ලැබුණු result එකක් පමණක් final result කරයි.
+      
       const acceptedMeasurement = Boolean(
         payload.counted_now ||
         trackingState === "COUNTED" ||
@@ -877,13 +837,13 @@ function LiveScanner({
     }
   }, [backendType, cameraReady, online]);
 
-  // SCAN_INTERVAL_MS එකකට වරක් scanFrame() call කරයි.
+
   useEffect(() => {
     const timer = window.setInterval(() => void scanFrame(), SCAN_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [scanFrame]);
 
-  // Scanner card එකේ පෙන්වීමට backend state සකස් කරයි.
+
   const stableCount = Number(result?.stable_count) || 0;
   const stableRequired = Number(result?.stable_required) || 3;
   const resultState = result?.tracking_state || result?.state;
@@ -1031,10 +991,7 @@ function LiveScanner({
 
 // -------------------- Main Dashboard page --------------------
 
-/**
- * Live production dashboard එක.
- * Target, packed count, speed, forecast සහ scanner card එක එකතු කර පෙන්වයි.
- */
+
 function Dashboard({
   schedule,
   production,
@@ -1054,41 +1011,41 @@ function Dashboard({
   edit: () => void;
   end: () => void;
 }) {
-  // Order එකේ sizes සියල්ලේ total target එක.
+  
   const target = total(schedule.targets);
 
-  // Current session එකේ sizes සියල්ලේ total packed count එක.
+  
   const packed = total(production);
 
-  // Target එක complete කිරීමට ඉතිරි quantity එක.
+  
   const remaining = Math.max(0, target - packed);
 
-  // Shift එකේ planned tea/lunch break minutes එකතුව.
+  
   const breakMinutes = schedule.breaks.reduce(
     (sum, item) => sum + minutesBetween(item.start, item.end),
     0,
   );
-  // Breaks අඩු කළ පසු production සඳහා ඇති effective hours.
+  
   const workHours = Math.max(
     1,
     (minutesBetween(schedule.shiftStart, schedule.shiftEnd) - breakMinutes) /
       60,
   );
-  // Pause කරපු time එක සහ දැන් run වන time එක එකතු කළ elapsed minutes.
+  
   const activeMinutes = active
     ? active.accumulatedMinutes + elapsedMinutes(active.activeStartedAt)
     : 0;
-  // Current packing speed = packed pieces / elapsed hours.
+  
   const speed = activeMinutes ? Math.round(packed / (activeMinutes / 60)) : 0;
 
-  // මේ speed එකෙන් ඉතිරි target එකට අවශ්‍ය hours.
+  
   const remainingHours = speed ? remaining / speed : 0;
 
   // Overall order completion percentage.
   const completion = target
     ? Math.min(100, Math.round((packed / target) * 100))
     : 0;
-  // Current speed එක වෙනස් නොවුණොත් complete වන predicted date/time.
+  
   const predicted =
     lastUpdated && speed
       ? new Date(lastUpdated.getTime() + remainingHours * 3600000)
@@ -1133,7 +1090,7 @@ function Dashboard({
           </div>
         </section>
         {!active && (
-          /* Active session එකක් නැති විට create/resume message එක පෙන්වයි. */
+          
           <section className="session-callout">
             <AlertTriangle />
             <div>
@@ -1146,7 +1103,7 @@ function Dashboard({
           </section>
         )}
 
-        {/* KPI CARDS: dashboard එකේ ඉහළ summary values 5 */}
+        {}
         <section className="kpi-grid">
           <Kpi
             label="TOTAL PACKED"
@@ -1185,9 +1142,9 @@ function Dashboard({
           />
         </section>
 
-        {/* පහළ dashboard cards එකම responsive grid එක තුළ render වේ. */}
+        
         <div className="dashboard-grid">
-          {/* CARD 1: Size-wise target, packed, remaining, speed සහ status table */}
+          
           <section className="panel production-panel">
             <div className="panel-heading">
               <div>
@@ -1211,7 +1168,7 @@ function Dashboard({
                 </thead>
                 <tbody>
                   {SIZES.map((size) => {
-                    // එක් size row එකට අවශ්‍ය values calculate කරයි.
+                    
                     const goal = schedule.targets[size],
                       done = active ? production[size] : 0,
                       left = Math.max(0, goal - done),
@@ -1331,7 +1288,7 @@ function Dashboard({
             </div>
           </section>
 
-          {/* CARD 4: එක් size එකක target සහ packed count bar comparison */}
+          {/* CARD 4: size  target and packed count bar comparison */}
           <section className="panel chart-panel">
             <div className="panel-heading">
               <div>
@@ -1376,7 +1333,7 @@ function Dashboard({
             </div>
           </section>
 
-          {/* CARD 5: සියලු sizes එකතු කළ overall completion donut */}
+          {/* CARD 5: All sizes sum overall completion donut */}
           <section className="panel completion-panel">
             <div className="panel-heading">
               <div>
@@ -1419,7 +1376,7 @@ function Dashboard({
 
 // -------------------- Target & Schedule page --------------------
 
-/** New order target, shift time සහ fixed breaks configure කරන page එක. */
+
 function TargetSchedule({
   value,
   online,
@@ -1431,14 +1388,14 @@ function TargetSchedule({
   active: ProductionSession | null;
   onSave: (value: Schedule) => Promise<void>;
 }) {
-  // User form එක edit කරන අතර temporary values මෙහි තබයි.
+  
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
 
-  // Parent schedule එක වෙනස් වූ විට form එකත් update කරයි.
+  
   useEffect(() => setDraft(value), [value]);
 
-  // Summary card එකට target සහ working-time calculations.
+  
   const goal = total(draft.targets),
     breakMinutes = draft.breaks.reduce(
       (sum, item) => sum + minutesBetween(item.start, item.end),
@@ -1446,13 +1403,13 @@ function TargetSchedule({
     );
   const shiftMinutes = minutesBetween(draft.shiftStart, draft.shiftEnd),
     effectiveHours = Math.max(0, (shiftMinutes - breakMinutes) / 60);
-  // Selected size එකේ target input value පමණක් update කරයි.
+  
   const changeTarget = (size: Size, value: string) =>
     setDraft((current) => ({
       ...current,
       targets: { ...current.targets, [size]: Math.max(0, Number(value) || 0) },
     }));
-  // Selected break row එකේ name/start/end field එක update කරයි.
+  
   const changeBreak = (id: string, field: keyof BreakItem, value: string) =>
     setDraft((current) => ({
       ...current,
@@ -1460,7 +1417,7 @@ function TargetSchedule({
         item.id === id ? { ...item, [field]: value } : item,
       ),
     }));
-  // Form validation pass වුණොත් Home component එකේ saveSchedule() call කරයි.
+  
   const save = async () => {
     if (!draft.orderId.trim()) return toast.error("Enter an Order ID");
     if (!draft.startDate) return toast.error("Select a start date");
@@ -1695,7 +1652,7 @@ function TargetSchedule({
               </div>
             </div>
             <div className="form-actions">
-              {/* New order එකකදී form එකම fresh defaults වලට reset කරයි. */}
+              {/* New order form fresh defaults  reset . */}
               <Button
                 variant="outline"
                 onClick={() => {
@@ -1721,7 +1678,7 @@ function TargetSchedule({
             </div>
           </section>
 
-          {/* Right card: form values වලින් live order summary එක */}
+          {/* Right card: form values  live order summary  */}
           <aside className="panel summary-panel">
             <div className="summary-icon">
               <CalendarDays />
@@ -1786,7 +1743,7 @@ function TargetSchedule({
 
 // -------------------- Production History page --------------------
 
-/** History table එකෙන් select කළ session එකේ detailed summary card එක. */
+
 function OrderSummary({
   session,
   onResume,
@@ -1857,7 +1814,7 @@ function OrderSummary({
     </section>
   );
 }
-/** Session search, resume, CSV download සහ summary පෙන්වන page එක. */
+/** Session search, resume, CSV download and summary */
 function HistoryPage({
   sessions,
   online,
@@ -1875,7 +1832,7 @@ function HistoryPage({
   const [selectedId, setSelectedId] = useState<string | null>(
     sessions[0]?.id ?? null,
   );
-  // Order ID search text එකට match වන sessions newest-first sort කරයි.
+  
   const ordered = useMemo(
     () =>
       [...sessions]
@@ -2052,7 +2009,7 @@ function HistoryPage({
 
 // -------------------- Production Analytics page --------------------
 
-/** Saved session history භාවිත කර charts සහ forecast values සාදයි. */
+/** Saved session history use charts and forecast values . */
 function AnalyticsPage({
   sessions,
   active,
@@ -2062,7 +2019,7 @@ function AnalyticsPage({
   active: ProductionSession | null;
   online: boolean;
 }) {
-  // සියලු sessions වල packed count size-wise එකතු කරයි.
+  // packed count size-wise .
   const sizeTotals = counts();
   sessions.forEach((session) =>
     SIZES.forEach((size) => {
@@ -2074,7 +2031,7 @@ function AnalyticsPage({
       (sum, session) => sum + total(session.schedule.targets),
       0,
     );
-  // Pie chart සහ legends වල size colours.
+  // Pie chart size colours.
   const palette: Record<Size, string> = {
     S: "#2087ed",
     M: "#7b5bd6",
@@ -2087,7 +2044,7 @@ function AnalyticsPage({
     angle += packed ? (sizeTotals[size] / packed) * 360 : 0;
     return `${palette[size]} ${start}deg ${angle}deg`;
   }).join(",");
-  // Trend chart එකට production තිබෙන අලුත්ම sessions 7 පමණක් ගනී.
+  // Trend chart production new sessions 7 only.
   const recent = [...sessions]
     .filter((s) => total(s.packed) > 0)
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
@@ -2408,7 +2365,7 @@ function AnalyticsPage({
 
 // -------------------- Downtime Log page --------------------
 
-/** Production interruption events add, summarize සහ delete කරන page එක. */
+/** Production interruption events add, summarize and delete page . */
 function DowntimePage({
   entries,
   sessions,
@@ -2424,7 +2381,7 @@ function DowntimePage({
   add: (entry: DowntimeEntry) => void;
   remove: (id: string) => void;
 }) {
-  // අලුත් downtime event form එකේ temporary values.
+  // new downtime event form temporary values.
   const [draft, setDraft] = useState({
     orderId: active?.orderId ?? "",
     date: today(),
@@ -2444,7 +2401,7 @@ function DowntimePage({
     topReason =
       Object.entries(reasons).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "--";
   const orderIds = Array.from(new Set(sessions.map((s) => s.orderId)));
-  // Form validate කර downtime entry එක parent state එකට add කරයි.
+  
   const submit = () => {
     const duration = minutesBetween(draft.start, draft.end);
     if (!draft.orderId) return toast.error("Select an Order ID");
@@ -2637,7 +2594,7 @@ function DowntimePage({
   );
 }
 
-// Alerts සහ Settings සඳහා දැනට භාවිත කරන simple placeholder page එක.
+
 function SimplePage({
   page,
   online,
@@ -2673,50 +2630,46 @@ function SimplePage({
     </>
   );
 }
-/** Current timestamp එකෙන් unique session ID එකක් සාදයි. */
+
 function makeSessionId() {
   return `SES-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
 // -------------------- Main application controller --------------------
 
-/**
- * App එකේ shared state, backend polling, session actions සහ page routing
- * එකම තැනක control කරන root component එක.
- */
+
 export default function Home({ onExit }: { onExit: () => void }) {
-  // දැන් user බලන sidebar page එක.
+  
   const [page, setPage] = useState<Page>("dashboard");
 
-  // Mobile screen එකේ sidebar open/close state එක.
+  
   const [navOpen, setNavOpen] = useState(false);
 
-  // Current order target සහ schedule settings.
+  
   const [schedule, setSchedule] = useState<Schedule>(() => createInitialSchedule());
 
-  // Active, paused සහ completed සියලු production sessions.
+  
   const [sessions, setSessions] = useState<ProductionSession[]>([]);
 
-  // දැන් run වන එකම production session එක. නැත්නම් null.
+  
   const [active, setActive] = useState<ProductionSession | null>(null);
 
-  // User add කළ downtime records.
+  
   const [downtime, setDowntime] = useState<DowntimeEntry[]>([]);
 
-  // Backend /counts endpoint එකෙන් ලැබෙන global size counts.
+  
   const [raw, setRaw] = useState<Counts>(counts());
 
-  // Backend online/offline සහ loading states.
+  
   const [online, setOnline] = useState(false);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Database orders සහ local-only downtime load කිරීම අවසන්දැයි දක්වයි.
+  
   const [hydrated, setHydrated] = useState(false);
   const orderSaveErrorShown = useRef(false);
 
-  // SQLite orders load කරයි. පැරණි v2 localStorage sessions තිබුණොත් එක් වරක්
-  // database එකට migrate කරලා legacy keys ඉවත් කරයි.
+  
   useEffect(() => {
     let cancelled = false;
     const open = () => setNavOpen(true);
@@ -2794,12 +2747,12 @@ export default function Home({ onExit }: { onExit: () => void }) {
       removeEventListener("open-nav", open);
     };
   }, []);
-  // Downtime list එක browser එකේ save කරයි.
+  
   useEffect(() => {
     if (hydrated)
       localStorage.setItem(STORE.downtime, JSON.stringify(downtime));
   }, [hydrated, downtime]);
-  /** Backend health සහ counts ලබාගෙන dashboard state update කරයි. */
+  
   const refresh = useCallback(async () => {
     try {
       // Connectivity is decided only by /health. A temporary /counts problem
@@ -2821,7 +2774,7 @@ export default function Home({ onExit }: { onExit: () => void }) {
       setLoading(false);
     }
   }, [schedule.garmentType]);
-  // App start වන විටත්, ඉන්පසු සෑම 1.5 seconds වලටත් refresh() call කරයි.
+
   useEffect(() => {
     const initial = setTimeout(refresh, 0),
       timer = setInterval(refresh, 1500);
@@ -2830,12 +2783,12 @@ export default function Home({ onExit }: { onExit: () => void }) {
       clearInterval(timer);
     };
   }, [refresh]);
-  // Global backend count එකෙන් current session එකට අදාළ count එක ගණනය කරයි.
+  
   const production = useMemo(
     () => liveSessionCounts(active, raw),
     [active, raw],
   );
-  // Live production count වෙනස් වූ විට active session සහ history row update කරයි.
+
   useEffect(() => {
     if (!hydrated || !active || sameCounts(active.packed, production)) return;
     const updated = { ...active, packed: counts(production) };
@@ -2855,10 +2808,7 @@ export default function Home({ onExit }: { onExit: () => void }) {
         }
       });
   }, [active, hydrated, production]);
-  /**
-   * Save & Start button action:
-   * active session තිබේ නම් update කරයි; නැත්නම් අලුත් session එකක් start කරයි.
-   */
+ 
   const saveSchedule = async (next: Schedule): Promise<void> => {
     if (active && active.orderId !== next.orderId) {
       toast.error(`End ${active.orderId} before starting another order`);
@@ -2926,10 +2876,7 @@ export default function Home({ onExit }: { onExit: () => void }) {
       toast.error(message);
     }
   };
-  /**
-   * End Session button action:
-   * target complete නම් completed; නැත්නම් paused කර History page එකට යවයි.
-   */
+  
   const endSession = async () => {
     if (!active) return;
     const now = new Date().toISOString(),
@@ -2971,7 +2918,7 @@ export default function Home({ onExit }: { onExit: () => void }) {
       toast.error(error instanceof Error ? error.message : "Order could not be ended");
     }
   };
-  /** History page එකේ Start button එකෙන් paused session එක continue කරයි. */
+  
   const resume = async (session: ProductionSession): Promise<void> => {
     if (active) {
       toast.error(`End active session ${active.orderId} first`);
@@ -3011,7 +2958,6 @@ export default function Home({ onExit }: { onExit: () => void }) {
       toast.error(error instanceof Error ? error.message : "Order could not be resumed");
     }
   };
-  /** History එකෙන් old order එක UI සහ SQLite දෙකෙන්ම delete කරයි. */
   const removeOrder = async (session: ProductionSession): Promise<void> => {
     if (session.status === "active") {
       toast.error("End the active order before deleting it");
@@ -3034,7 +2980,7 @@ export default function Home({ onExit }: { onExit: () => void }) {
       toast.error(error instanceof Error ? error.message : "Order could not be deleted");
     }
   };
-  // page state එක අනුව අදාළ page component එක පමණක් render කරයි.
+  
   return (
     <div className="garment-size-module app-shell">
       <Sidebar
@@ -3067,7 +3013,7 @@ export default function Home({ onExit }: { onExit: () => void }) {
           />
         )}
 
-        {/* Order target සහ schedule configuration */}
+        {/* Order target and schedule configuration */}
         {page === "schedule" && (
           <TargetSchedule
             value={schedule}
@@ -3088,7 +3034,7 @@ export default function Home({ onExit }: { onExit: () => void }) {
           />
         )}
 
-        {/* Historical charts සහ forecast */}
+        {/* Historical charts and forecast */}
         {page === "analytics" && (
           <AnalyticsPage sessions={sessions} active={active} online={online} />
         )}
