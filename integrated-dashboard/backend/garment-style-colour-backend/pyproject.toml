@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "threadscan-backend"
+version = "1.1.0"
+description = "ThreadScan garment style detection API and computer-vision services"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
+    "numpy>=1.26,<3",
+    "flask>=3,<4",
+    "flask-cors>=5,<7",
+    "opencv-python>=4.10,<5",
+    "requests>=2.32,<3",
+    "ultralytics>=8.3,<9",
+    "pygrabber>=0.2; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "ruff>=0.9,<1",
+]
+release = [
+    "pyinstaller>=6.12,<7",
+]
+
+[tool.setuptools]
+py-modules = [
+    "analytics",
+    "camera_devices",
+    "database",
+    "launcher",
+    "live_webcam_pipeline",
+    "main",
+    "models",
+    "style_engine",
+]

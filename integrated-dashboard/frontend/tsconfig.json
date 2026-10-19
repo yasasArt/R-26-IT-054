@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@platform/*": ["src/*"],
+      "@garment-counter/*": ["garment-counter-frontend/*"],
+      "@garment-rework/*": ["garment-rework-frontend/*"],
+      "@garment-style-colour/*": ["garment-style-colour-frontend/*"],
+      "@garment-size/*": ["garment-size-frontend/*"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "garment-counter-frontend/**/*.ts",
+    "garment-counter-frontend/**/*.tsx",
+    "garment-rework-frontend/**/*.js",
+    "garment-rework-frontend/**/*.jsx",
+    "garment-style-colour-frontend/**/*.ts",
+    "garment-style-colour-frontend/**/*.tsx",
+    "garment-size-frontend/**/*.ts",
+    "garment-size-frontend/**/*.tsx",
+    "tests/**/*.ts",
+    "*.config.ts"
+  ]
+}
