@@ -515,7 +515,7 @@ def update_tracker_ready(
     }
 
     with TRACKER_LOCK:
-        # UNKNOWN results production count එකට එකතු නොකරයි.
+        
         if size not in COUNTED_SIZES or size in {
             "UNKNOWN",
             "REFERENCE_REQUIRED",
@@ -528,7 +528,7 @@ def update_tracker_ready(
 
         TRACKER["empty_frames"] = 0
 
-        # කලින් garment එක count කරලා නම් remove කරන තුරු wait කරන්න.
+        
         if TRACKER["current_garment_counted"]:
             TRACKER["tracking_state"] = "WAIT_REMOVAL"
 
@@ -536,7 +536,7 @@ def update_tracker_ready(
 
         samples = TRACKER["stable_samples"]
 
-        # Measurements අතර වෙනස වැඩි නම් නැවත stabilizing පටන්ගන්න.
+        
         if samples and not stable_samples_are_consistent(
             samples[-1],
             current_sample,
