@@ -1095,7 +1095,6 @@ button:focus-visible {
 }
 
 .device-card-grid,
-.chart-split-grid,
 .activity-split-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2086,6 +2085,18 @@ button:focus-visible {
   padding: 0 14px 12px;
 }
 
+.cycle-chart-row {
+  min-width: 0;
+}
+
+.chart-panel-wide {
+  overflow-x: auto;
+}
+
+.chart-panel-wide .operator-empty-state {
+  min-height: 265px;
+}
+
 .chart-panel-heading {
   display: flex;
   min-height: 72px;
@@ -2111,6 +2122,10 @@ button:focus-visible {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.cycle-chart {
+  min-width: 640px;
 }
 
 .chart-grid-line {
@@ -2166,25 +2181,6 @@ button:focus-visible {
 .legend-over {
   margin-left: 5px;
   background: #d94f70;
-}
-
-.target-step-line {
-  fill: none;
-  stroke: #22a27e;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
-}
-
-.target-step-marker,
-.target-step-final {
-  fill: #ffffff;
-  stroke: #22a27e;
-  stroke-width: 2;
-}
-
-.target-step-final {
-  fill: #22a27e;
 }
 
 .chart-footer {
@@ -2746,7 +2742,6 @@ button:focus-visible {
 
 @media (max-width: 1110px) {
   .device-card-grid,
-  .chart-split-grid,
   .activity-split-grid,
   .vision-monitor-grid,
   .settings-employee-grid,

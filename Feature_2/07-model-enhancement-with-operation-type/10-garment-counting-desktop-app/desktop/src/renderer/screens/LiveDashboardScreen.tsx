@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { getProgressPercent } from "../../shared/chart-data";
 import type { DashboardPayload, IotEventType, ProductionSession } from "../../shared/types";
-import { CycleTimeChart, TargetCountdownChart } from "../components/ProductionCharts";
+import { CycleTimeChart } from "../components/ProductionCharts";
 import { Icon } from "../components/Icon";
 import { CycleStatusBadge, EmptyState, InlineNotice, MetricCard, ModeBadge, operationLabel, PageHeading } from "../components/OperatorUi";
 import { VisionMonitor } from "../components/VisionMonitor";
@@ -188,14 +188,10 @@ export function LiveDashboardScreen({ session, onSessionUpdated, onSessionComple
         </section>
       ) : null}
 
-      <div className="chart-split-grid">
-        <section className="panel chart-panel">
+      <div className="cycle-chart-row">
+        <section className="panel chart-panel chart-panel-wide">
           <header className="chart-panel-heading"><div><span className="eyebrow">PER-GARMENT PERFORMANCE</span><h2>Cycle time by piece</h2></div><span>seconds</span></header>
           <CycleTimeChart events={dashboard?.piece_events ?? []} estimatedCycleTime={current.estimated_cycle_time_sec} />
-        </section>
-        <section className="panel chart-panel">
-          <header className="chart-panel-heading"><div><span className="eyebrow">TARGET PROGRESS</span><h2>Pieces remaining</h2></div><span>step-down</span></header>
-          <TargetCountdownChart points={dashboard?.target_series ?? [{ piece_number: 0, remaining_pieces: current.target_pieces }]} target={current.target_pieces} />
         </section>
       </div>
 
