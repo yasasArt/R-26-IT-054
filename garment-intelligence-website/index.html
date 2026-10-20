@@ -191,7 +191,8 @@ td.act{text-align:right;white-space:nowrap}
 ul.prose,ol.prose{padding-left:1.2em;margin:0}
 @media (max-width:900px){.toc{display:none}}
 .cbody>div{min-width:0}
-@media (max-width:560px){#p-documents td:nth-child(2),#p-documents th:nth-child(2){display:none}}
+#p-documents td code{overflow-wrap:anywhere}
+@media (max-width:560px){#p-documents td:nth-child(2),#p-documents th:nth-child(2),#p-documents td:nth-child(3),#p-documents th:nth-child(3){display:none}#p-documents th,#p-documents td{padding-inline:10px}}
 
 </style>
 
@@ -233,9 +234,9 @@ ul.prose,ol.prose{padding-left:1.2em;margin:0}
         <div><b>4</b><span>research components</span></div>
         <div><b>5</b><span>trained models shipped</span></div>
         <div><b>0</b><span>servers or network links needed</span></div>
-        <div><b>128</b><span>platform tests passed (74 + 54)</span></div>
+        <div><b>188</b><span>automated tests passed, 10 Oct 2026</span></div>
       </div>
-      <p class="src">Test counts: docs/21-integrated-source-verification.md</p>
+      <p class="src">Test count: common integrated solution report, Table 6.2</p>
     </div>
   </div>
 
@@ -761,32 +762,43 @@ flowchart TB
     <div><span class="verified">Passed</span><p>74 Production Monitoring backend tests; 54 Electron policy and ownership tests</p></div>
     <div><span class="verified">Passed</span><p>TypeScript, ESLint with zero warnings, production build, release doctor</p></div>
   </div><p class="note">Seven supplied artifacts (five checkpoints and two seed databases) are pinned by SHA-256. Physical cameras, lighting, the 100 cm size-camera placement, ESP32 Bluetooth and OS permissions are covered by the hardware rehearsal checklist.</p></div>
+  <div class="panel stack"><h3>Integrated test run, 10 Oct 2026</h3><div class="grid4">
+    <div><span class="verified">60 passed</span><p>Platform shell and integration tests (Node)</p></div>
+    <div><span class="verified">74 passed</span><p>C1 Production Monitoring backend tests (pytest)</p></div>
+    <div><span class="verified">51 passed</span><p>C2 Rework Counter backend tests (pytest)</p></div>
+    <div><span class="verified">3 passed</span><p>C4 Size Detection order persistence tests (pytest)</p></div>
+  </div><p class="note">Run on a Linux workstation without cameras or a graphics processor. C3's 107 tests belong to its original repository and are reported passing in its thesis. Source: common integrated solution report, Section 6.2.</p></div>
   <div class="panel stack"><h3>Roadmap</h3><p class="roadmap"><span>Hardware rehearsal</span><span>F1 and field accuracy measured</span><span>Signed installer</span><span>Single-line pilot</span><span>Multi-line plant reporting</span></p></div>
 </section>
 
 <!-- ============================ MILESTONES ============================ -->
 <section class="page" id="p-milestones" data-page="milestones" hidden>
   <div class="sec-head"><div class="eyebrow">Milestones</div><h2>Assessments and progress</h2></div>
-  <div class="tbl"><table><thead><tr><th>Assessment</th><th>Status</th><th>Notes</th></tr></thead><tbody>
-    <tr><td>Project proposal</td><td><span class="verified">Completed</span></td><td>Proposal document dated 6 March 2026; topic: AI-Powered Vision System for Real-Time Garment Tracking in Apparel Manufacturing</td></tr>
-    <tr><td>Progress Presentation 1</td><td><span class="verified">Completed</span></td><td>Panel feedback recorded and addressed in the integrated release</td></tr>
-    <tr><td>Progress Presentation 2</td><td><span class="verified">Completed</span></td><td>Panel comments answered in the final presentation</td></tr>
-    <tr><td>Final research document</td><td><span class="status-next">Drafts prepared</span></td><td>Four individual thesis drafts, October 2026 (Documents page)</td></tr>
-    <tr><td>Final presentation</td><td><span class="status-next">In preparation</span></td><td>Final presentation deck R26-IT-054 prepared</td></tr>
-    <tr><td>Viva</td><td><span class="status-next">In preparation</span></td><td>Held with the final presentation</td></tr>
+  <div class="tbl"><table><thead><tr><th>Assessment</th><th>Date</th><th>Status</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>Topic assessment form</td><td>January 2026</td><td><span class="verified">Completed</span></td><td>Supervisor and co-supervisor answered yes to all four assessment questions and signed the form</td></tr>
+    <tr><td>Project proposal</td><td>6 and 20 March 2026</td><td><span class="verified">Completed</span></td><td>Proposal document dated 6 March 2026; proposal presentation on 20 March 2026</td></tr>
+    <tr><td>Progress Presentation 1</td><td>12 May 2026</td><td><span class="verified">Completed</span></td><td>Mandatory checklist submitted on 13 May 2026</td></tr>
+    <tr><td>Progress Presentation 2</td><td>1 to 3 September 2026</td><td><span class="verified">Completed</span></td><td>Member logbooks record 1 September (C2, C4) and 3 September (C3)</td></tr>
+    <tr><td>Draft theses and common report</td><td>11 October 2026</td><td><span class="verified">Submitted</span></td><td>Four individual thesis drafts submitted on the faculty deadline; common integrated solution report signed by all four members</td></tr>
+    <tr><td>Project website</td><td>11 October 2026</td><td><span class="verified">Submitted</span></td><td>Submitted for evaluation</td></tr>
+    <tr><td>Final checklist</td><td>14 October 2026</td><td><span class="verified">Submitted</span></td><td>Final requirements and system features checked before submission</td></tr>
+    <tr><td>Final presentation and viva</td><td>21 October 2026</td><td><span class="status-next">Scheduled</span></td><td>Date from the group planner; final presentation deck prepared</td></tr>
   </tbody></table></div>
+  <p class="src">Dates: member logbooks and Microsoft Planner exports (Documents page)</p>
   <div class="panel stack">
     <h3>Development record</h3>
     <ul class="tl">
+      <li><time>25 Mar – 8 Apr 2026</time><p>C3 video data requirements defined; factory access and recording permission obtained.</p></li>
+      <li><time>4 May 2026</time><p>First commits to the shared repository: React frontend, login and setup pages. Twelve pull requests merged in May brought the first sewing, quality-checking, colour and size screens together.</p></li>
+      <li><time>21–23 Jul 2026</time><p>C1's 60 workstation videos annotated and split; MobileNetV3 state classifier trained.</p></li>
+      <li><time>9–21 Aug 2026</time><p>C3 model, training folder and webcam pipeline committed; C4 video annotation, best-frame selection, size chart and size detection code committed.</p></li>
       <li><time>15 Aug 2026</time><p>C2 garment-piece detector trained (50 epochs).</p></li>
-      <li><time>17 Aug 2026</time><p>C1 workstation detector trained.</p></li>
-      <li><time>23 Aug 2026</time><p>C3 four-class style detector trained.</p></li>
-      <li><time>27 Aug 2026</time><p>C4 garment segmentation model trained.</p></li>
-      <li><time>28 Aug 2026</time><p>C2 functional test sessions logged.</p></li>
+      <li><time>26–30 Aug 2026</time><p>C1 FastAPI service, ESP32-C3 controller code, cycle decoder and live vision runtime; first local desktop application on 30 August.</p></li>
       <li><time>29 Aug 2026</time><p>Integrated source verification of all four components.</p></li>
-      <li><time>After 29 Aug 2026</time><p>Version 3.1 corrective release after Windows testing, and the size-order database fix.</p></li>
-      <li><time>17 Oct 2026</time><p>Garment Intelligence 3.1 presentation and demo scripts prepared.</p></li>
-      <li><time>18 Oct 2026</time><p>Feature order changed to follow the production flow; final presentation R26-IT-054 prepared.</p></li>
+      <li><time>31 Aug 2026</time><p>Size feature merged into the platform (pull request #17).</p></li>
+      <li><time>16–25 Sep 2026</time><p>C1 operation-type model trained and compared with the baseline; C3 database migrated to SQLite during September.</p></li>
+      <li><time>9–10 Oct 2026</time><p>Final analytics and integration updates merged, ending with pull request #29; 188 automated tests executed and passed.</p></li>
+      <li><time>18 Oct 2026</time><p>Feature order changed to follow the production flow; final presentation prepared.</p></li>
       <li><time>19 Oct 2026</time><p>C3 style detection accuracy update: new capture engine.</p></li>
     </ul>
   </div>
@@ -795,11 +807,7 @@ flowchart TB
 <!-- ============================ DOCUMENTS ============================ -->
 <section class="page" id="p-documents" data-page="documents" hidden>
   <div class="sec-head"><div class="eyebrow">Documents</div><h2>Project documents</h2><p>Select <b>Download</b> to save a copy of any document.</p></div>
-  
-  <div class="stack"><h3>Research documents and presentations</h3>
-  <div class="tbl"><table><thead><tr><th>Document</th><th>Details</th><th class="num">Size</th><th></th></tr></thead><tbody id="acadlist"></tbody></table></div></div>
-  <div class="stack"><h3>Technical documentation</h3>
-  <div class="tbl"><table><thead><tr><th>Document</th><th>Contents</th><th class="num">Size</th><th></th></tr></thead><tbody id="doclist"></tbody></table></div></div>
+  <div id="docgroups" class="stack"></div>
 </section>
 
 <!-- ============================ REFERENCES ============================ -->
@@ -848,52 +856,43 @@ flowchart TB
 <script>window.mermaid&&mermaid.initialize({startOnLoad:false,theme:"neutral",securityLevel:"strict"});</script>
 <script>
 const DATA = {"rework":{"epoch":[1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0,17.0,18.0,19.0,20.0,21.0,22.0,23.0,24.0,25.0,26.0,27.0,28.0,29.0,30.0,31.0,32.0,33.0,34.0,35.0,36.0,37.0,38.0,39.0,40.0,41.0,42.0,43.0,44.0,45.0,46.0,47.0,48.0,49.0,50.0],"P":[0.5252,0.6058,0.6974,0.8232,0.7024,0.6778,0.8246,0.8827,0.7782,0.8319,0.8288,0.8398,0.8658,0.8071,0.8558,0.8198,0.8626,0.8253,0.901,0.7942,0.8693,0.8443,0.831,0.8968,0.9265,0.8575,0.8217,0.8548,0.8218,0.8603,0.8454,0.8801,0.8252,0.8635,0.8847,0.9079,0.9299,0.8688,0.8982,0.9073,0.9249,0.8621,0.8578,0.9005,0.8651,0.9,0.8985,0.9115,0.8779,0.8952],"R":[0.3787,0.5616,0.6108,0.6994,0.6897,0.7616,0.67,0.704,0.7488,0.6995,0.7635,0.7359,0.7118,0.7214,0.7162,0.7808,0.742,0.7709,0.7044,0.7685,0.7537,0.7878,0.7873,0.7635,0.7537,0.7783,0.7832,0.8118,0.8276,0.8194,0.8351,0.8134,0.837,0.8568,0.8122,0.8258,0.8374,0.8596,0.8325,0.8079,0.8187,0.8623,0.8765,0.8696,0.8867,0.8522,0.8717,0.8374,0.8851,0.8695],"mAP50":[0.4205,0.5555,0.6644,0.7806,0.7185,0.7666,0.797,0.8272,0.8373,0.8229,0.8557,0.8431,0.8502,0.8225,0.842,0.8628,0.8679,0.8561,0.8667,0.8654,0.879,0.8738,0.8802,0.8781,0.8802,0.8862,0.8697,0.9053,0.8992,0.9064,0.9104,0.914,0.8991,0.9107,0.9167,0.9313,0.9328,0.9203,0.9258,0.923,0.9248,0.9317,0.9264,0.9336,0.9365,0.9317,0.9328,0.9325,0.9399,0.9375],"mAP50_95":[0.1732,0.2114,0.3143,0.354,0.3205,0.3681,0.3683,0.4155,0.4272,0.4256,0.4337,0.4517,0.4497,0.4321,0.4373,0.4598,0.4629,0.4568,0.4551,0.4691,0.4767,0.4598,0.477,0.4759,0.4818,0.4984,0.4824,0.4958,0.5034,0.5016,0.5131,0.5169,0.5199,0.5155,0.5199,0.5256,0.5248,0.513,0.5363,0.5321,0.5363,0.5322,0.5342,0.5446,0.5446,0.5488,0.5467,0.5524,0.5531,0.5565]},"size":{"epoch":[1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0,17.0,18.0,19.0,20.0,21.0,22.0,23.0,24.0,25.0,26.0,27.0,28.0,29.0,30.0,31.0,32.0,33.0,34.0],"P":[0.8996,0.9492,0.9611,0.9357,0.9742,0.9627,0.9687,0.9747,0.9647,0.9723,0.9693,0.9615,0.9769,0.9691,0.9698,0.9773,0.975,0.975,0.9765,0.9846,0.975,0.9767,0.977,0.9766,0.9823,0.9771,0.9756,0.9691,0.9771,0.9766,0.9768,0.9765,0.9769,0.9701],"R":[0.9482,0.9694,0.9556,0.9111,0.9111,0.9546,0.9704,0.963,0.9333,0.9482,0.9704,0.9258,0.9556,0.9308,0.963,0.9552,0.9704,0.963,0.963,0.9476,0.9185,0.9704,0.9704,0.9704,0.9704,0.9704,0.9704,0.9704,0.9704,0.9253,0.9704,0.9704,0.9407,0.9624],"mAP50":[0.9444,0.9597,0.956,0.9114,0.9092,0.957,0.965,0.9657,0.9584,0.9581,0.9658,0.9315,0.966,0.9496,0.9569,0.9549,0.9612,0.9671,0.9686,0.9623,0.9516,0.9611,0.9606,0.962,0.961,0.9614,0.966,0.9572,0.963,0.9105,0.964,0.9627,0.9587,0.9539],"mAP50_95":[0.8833,0.9162,0.8667,0.8543,0.8744,0.9248,0.9064,0.9366,0.8869,0.9277,0.9398,0.8729,0.9339,0.8996,0.9447,0.9176,0.9384,0.9493,0.9562,0.9355,0.8696,0.9451,0.9333,0.9455,0.9491,0.9502,0.9415,0.934,0.9461,0.8966,0.9549,0.9503,0.9348,0.9355]},"style":{"epoch":[1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0,17.0,18.0,19.0,20.0,21.0,22.0,23.0,24.0,25.0,26.0,27.0,28.0,29.0,30.0,31.0,32.0,33.0,34.0,35.0,36.0,37.0,38.0,39.0,40.0,41.0,42.0,43.0,44.0,45.0,46.0,47.0,48.0,49.0,50.0],"P":[0.5913,0.7448,0.5543,0.8267,0.8284,0.8888,0.7558,0.8588,0.8584,0.8717,0.9112,0.8013,0.8907,0.8589,0.8998,0.9335,0.9168,0.9289,0.8587,0.9039,0.9548,0.9135,0.9179,0.9395,0.9064,0.9549,0.9648,0.9316,0.9372,0.956,0.9458,0.9599,0.9578,0.9278,0.943,0.938,0.9554,0.9611,0.9584,0.948,0.9484,0.9577,0.9516,0.9521,0.9496,0.9468,0.9683,0.9479,0.9585,0.9574],"R":[0.7517,0.8297,0.807,0.8399,0.7982,0.8348,0.8859,0.9115,0.8633,0.9108,0.9319,0.8025,0.8647,0.9,0.915,0.9103,0.9474,0.9477,0.885,0.942,0.9572,0.9319,0.9039,0.9483,0.9484,0.9582,0.9133,0.9408,0.9556,0.9528,0.945,0.9285,0.9375,0.9249,0.9575,0.9647,0.9716,0.9668,0.9545,0.9534,0.9676,0.9624,0.9499,0.959,0.9647,0.9623,0.9552,0.9708,0.9656,0.9676],"mAP50":[0.7199,0.8887,0.7958,0.9135,0.9051,0.9488,0.9179,0.9562,0.9464,0.9541,0.9766,0.9187,0.958,0.9716,0.972,0.9746,0.9737,0.9786,0.9658,0.9768,0.9842,0.9733,0.9807,0.982,0.9693,0.9808,0.9721,0.9726,0.9798,0.9837,0.9815,0.9819,0.9808,0.9841,0.9801,0.9752,0.983,0.9776,0.9837,0.9815,0.9872,0.9837,0.9847,0.9853,0.9854,0.9852,0.9856,0.9857,0.9842,0.9845],"mAP50_95":[0.5477,0.6655,0.6279,0.7077,0.7509,0.8046,0.7599,0.8182,0.7826,0.8176,0.8554,0.8038,0.8326,0.847,0.8276,0.8623,0.8701,0.8719,0.8505,0.873,0.8864,0.8788,0.8705,0.8816,0.8669,0.8929,0.8709,0.8819,0.8852,0.8944,0.8832,0.8892,0.8951,0.8946,0.8884,0.8914,0.8986,0.8811,0.8956,0.8943,0.9073,0.8982,0.9032,0.9051,0.9115,0.9101,0.9092,0.9103,0.91,0.9088]},"workstation":{"epoch":[1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0,17.0,18.0,19.0,20.0,21.0,22.0,23.0,24.0,25.0,26.0,27.0,28.0,29.0,30.0,31.0,32.0,33.0,34.0,35.0,36.0,37.0,38.0,39.0,40.0,41.0,42.0,43.0,44.0,45.0,46.0,47.0,48.0,49.0,50.0],"P":[0.9302,0.9982,0.8665,0.9531,0.9584,0.9959,0.9982,0.9994,0.9989,0.9914,0.9889,0.9974,0.999,0.9994,0.9993,0.9993,0.9992,1.0,0.9994,0.9993,0.9994,0.9994,0.9994,0.9994,0.9992,0.9994,0.9994,0.9994,0.9993,0.9994,0.9994,0.9994,0.9994,0.9994,0.9994,0.9994,0.9994,0.9994,0.9994,0.9994,0.9972,0.9993,0.9994,0.9994,0.9994,0.9994,0.9994,0.9994,0.9994,0.9994],"R":[0.9231,1.0,0.9428,0.8687,0.9839,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.9991,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"mAP50":[0.9234,0.995,0.965,0.961,0.9936,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995,0.995],"mAP50_95":[0.4,0.6137,0.6109,0.6271,0.6791,0.7052,0.7217,0.7033,0.7217,0.7023,0.7266,0.6906,0.7281,0.7313,0.7417,0.7205,0.7157,0.6814,0.7378,0.7334,0.706,0.7359,0.7437,0.7379,0.7599,0.7196,0.7138,0.7438,0.7525,0.7482,0.7528,0.7486,0.7398,0.757,0.7443,0.7554,0.7528,0.7464,0.7612,0.7518,0.754,0.7483,0.756,0.758,0.7539,0.7553,0.7523,0.758,0.7573,0.758]},"temporal":[{"epoch":1,"train_loss":0.352,"train_accuracy":0.8756,"train_macro_f1":0.8756,"validation_loss":0.2787,"validation_accuracy":0.9467,"validation_macro_f1":0.9353,"backbone_learning_rate":0.0001,"classifier_learning_rate":0.0003,"elapsed_sec":696.6939},{"epoch":2,"train_loss":0.2397,"train_accuracy":0.9436,"train_macro_f1":0.9436,"validation_loss":0.2568,"validation_accuracy":0.9508,"validation_macro_f1":0.9415,"backbone_learning_rate":0.0001,"classifier_learning_rate":0.0003,"elapsed_sec":971.1689},{"epoch":3,"train_loss":0.199,"train_accuracy":0.9647,"train_macro_f1":0.9647,"validation_loss":0.2359,"validation_accuracy":0.9568,"validation_macro_f1":0.9478,"backbone_learning_rate":0.0001,"classifier_learning_rate":0.0003,"elapsed_sec":868.4486},{"epoch":4,"train_loss":0.179,"train_accuracy":0.9762,"train_macro_f1":0.9762,"validation_loss":0.2536,"validation_accuracy":0.9598,"validation_macro_f1":0.9522,"backbone_learning_rate":0.0001,"classifier_learning_rate":0.0003,"elapsed_sec":1114.1815},{"epoch":5,"train_loss":0.168,"train_accuracy":0.9786,"train_macro_f1":0.9786,"validation_loss":0.2021,"validation_accuracy":0.9638,"validation_macro_f1":0.9567,"backbone_learning_rate":0.0001,"classifier_learning_rate":0.0003,"elapsed_sec":1141.1807}]};
-const DOCS = [
- ["README_GitHub.md","Project overview for GitHub: components, screenshots, architecture, stack, team"],
- ["README.md","Platform overview, feature mapping and setup"],
- ["00-frozen-product-behaviour.md","C1 counting, IoT and session rules"],
- ["01-phase-one-development-guide.md","Phase 1: Electron foundation"],
- ["02-system-architecture.md","C1 system architecture"],
- ["03-viva-questions.md","Phase 0 and 1 viva questions and answers"],
- ["04-acceptance-checklist.md","Phase 0 and 1 acceptance checklist"],
- ["05-phase-two-development-guide.md","Phase 2: authenticated FastAPI integration"],
- ["06-database-and-api-reference.md","Database tables and API routes"],
- ["07-operator-workflow.md","Factory-floor operator workflow"],
- ["08-acceptance-checklist-phase-two.md","Phase 2 acceptance checklist"],
- ["09-phase-three-development-guide.md","Phase 3: real AI camera integration"],
- ["10-vision-api-and-validation-guide.md","Vision API and validation procedure"],
- ["11-acceptance-checklist-phase-three.md","Phase 3 acceptance checklist"],
- ["12-phase-four-development-guide.md","Phase 4: physical IoT controller"],
- ["13-bluetooth-hardware-and-troubleshooting.md","ESP32-C3 hardware guide"],
- ["14-acceptance-checklist-phase-four.md","Phase 4 acceptance checklist"],
- ["15-final-production-deployment-guide.md","Packaging and factory deployment"],
- ["16-final-release-acceptance-checklist.md","Final release checklist"],
- ["17-sewing-component-original-readme.md","Garment Counter Desktop 1.0.3 README (C1)"],
- ["18-integrated-platform-guide.md","Integrated platform architecture and handover"],
- ["19-final-presentation-and-handover-checklist.md","Final presentation and handover checklist"],
- ["20-production-release-guide.md","Production release guide"],
- ["20-threadscan-original-readme.md","ThreadScan README (C3)"],
- ["21-integrated-source-verification.md","Checksums and verification results"],
- ["22-version-3.1-fixes.md","Version 3.1 corrective release"],
- ["23-size-order-database-fixes.md","Size order and database fixes (C4)"],
- ["24-style-detection-accuracy-update.md","Style detection accuracy update (C3)"],
- ["firmware-README.md","ESP32-C3 firmware and wiring"]
+const DOCGROUPS = [
+ ["Group documents", [
+  ["Topic_Assessment_Form_TAF.docx","Topic assessment form (TAF)","Group · IT4010, January 2026 · signed by the supervisor and co-supervisor"],
+  ["Project_Proposal.docx","Project proposal","Group · 6 March 2026"],
+  ["R26-IT-054_Common_Integrated_Solution_Report.pdf","Common integrated solution report: Garment Intelligence, an integrated vision based platform for production monitoring, quality checking and packing decision support","Group · October 2026 · 63 pages"]
+ ]],
+ ["Presentations", [
+  ["PP1_Presentation.pptx","Progress Presentation 1 (PP1) slides","Group · 12 May 2026 · 28 slides",2],
+  ["Progress_Presentation.pptx","Progress presentation, 12-slide edition","Group · 8 May 2026 · panel feedback, research gap, personas, architecture, sewing-area progress"],
+  ["PP2_Presentation.pptx","Progress Presentation 2 (PP2) slides: Garment Intelligence 3.1","Group · September 2026 · 8 slides: integrated release, evaluation, commercialisation"],
+  ["Final_Presentation.pptx","Final presentation and viva slides","Group · October 2026 · 8 slides"]
+ ]],
+ ["Individual theses and research paper", [
+  ["IT21255892_Thesis_Draft.pdf","Individual thesis draft: A Vision-Based Framework for Real-Time Garment Piece Counting and Sewing Cycle-Time Measurement","C1 · Dharmarathna P.W.A.N. · IT21255892"],
+  ["IT22627582_Thesis_Draft.pdf","Individual thesis draft: Real-Time Good and Rework Garment Counting at the Quality Checking Workstation","C2 · Pathiraja H.P.M.H.D.S. · IT22627582"],
+  ["IT22556370_Thesis_Draft.pdf","Individual thesis draft: Real-Time Garment Style and Colour Detection Using Confidence-Gated YOLOv8","C3 · Jayaweera M.P.Y.C. · IT22556370"],
+  ["IT22187796_Thesis_Draft.pdf","Individual thesis draft: Real-Time Best-Frame Selection and Marker-Free Garment Size Measurement","C4 · Jayarathna W.G.U.C.G. · IT22187796"],
+  ["C3_Research_Paper_Style_Colour.pdf","Research paper: Real-Time Garment Style and Colour Detection Using Confidence-Gated YOLOv8 for Smart Apparel Manufacturing","C3 · Jayaweera M.P.Y.C. · IT22556370 · 6 pages"]
+ ]],
+ ["Research logbooks", [
+  ["IT21255892_Logbook.pdf","Research logbook: Production Monitoring","C1 · Dharmarathna P.W.A.N. · 20 March to 10 October 2026 · 41 pages"],
+  ["IT22627582_Logbook.pdf","Research logbook: Rework Counter","C2 · Pathiraja H.P.M.H.D.S. · 22 March to 18 October 2026 · 11 pages"],
+  ["IT22556370_Logbook.pdf","Research logbook: Style and Colour Detection","C3 · Jayaweera M.P.Y.C. · 20 March to 18 October 2026 · 26 pages"],
+  ["IT22187796_Logbook.pdf","Research logbook: Size Detection","C4 · Jayarathna W.G.U.C.G. · 23 March to 19 October 2026 · 15 pages"]
+ ]],
+ ["Microsoft Planner task exports", [
+  ["IT21255892_Planner_Piece_Counting.xlsx","Planner export: Garment Piece Counting and Cycle-Time Analysis","C1 · exported 14 October 2026 · plan name and export date only, no task rows"],
+  ["IT22627582_Planner_Rework_Handling.xlsx","Planner export: Garment Rework Handling","C2 · exported 14 October 2026 · 235 tasks, 232 completed"],
+  ["IT22556370_Planner_Style_Colour.xlsx","Planner export: Style and Colour Detection","C3 · exported 14 October 2026 · 116 tasks, 103 completed"],
+  ["IT22187796_Planner_Size_Measurement.xlsx","Planner export: Garment Size Measurement","C4 · exported 14 October 2026 · 87 tasks, 77 completed"]
+ ]]
 ];
-const ACAD = [
- ["Project_Proposal.docx","Project proposal","Group · 6 March 2026"],
- ["Progress_Presentation.pptx","Progress presentation slides","Group · panel feedback, research gap, architecture, progress"],
- ["Garment-Intelligence-3.1-Presentation.pptx","Garment Intelligence 3.1 presentation","Group · integrated release, evaluation, commercialisation"],
- ["IT21255892_Thesis_Draft.pdf","Individual thesis draft: A Vision-Based Framework for Real-Time Garment Piece Counting and Sewing Cycle-Time Measurement","C1 · Dharmarathna P.W.A.N. · IT21255892"],
- ["IT22627582_Thesis_Draft.pdf","Individual thesis draft: Real-Time Good and Rework Garment Counting at the Quality Checking Workstation","C2 · Pathiraja H.P.M.H.D.S. · IT22627582"],
- ["IT22556370_Thesis_Draft.pdf","Individual thesis draft: Real-Time Garment Style and Colour Detection Using Confidence-Gated YOLOv8","C3 · Jayaweera M.P.Y.C. · IT22556370"],
- ["IT22187796_Thesis_Draft.pdf","Individual thesis draft: Real-Time Best-Frame Selection and Marker-Free Garment Size Measurement","C4 · Jayarathna W.G.U.C.G. · IT22187796"]
-];
-const SIZES = {"08-acceptance-checklist-phase-two.md": 2459, "firmware-README.md": 1374, "04-acceptance-checklist.md": 1746, "12-phase-four-development-guide.md": 4274, "09-phase-three-development-guide.md": 4556, "05-phase-two-development-guide.md": 4129, "README_GitHub.md": 12753, "16-final-release-acceptance-checklist.md": 2321, "02-system-architecture.md": 4107, "19-final-presentation-and-handover-checklist.md": 2852, "README.md": 5289, "03-viva-questions.md": 3213, "13-bluetooth-hardware-and-troubleshooting.md": 4644, "15-final-production-deployment-guide.md": 5259, "18-integrated-platform-guide.md": 6283, "01-phase-one-development-guide.md": 4164, "21-integrated-source-verification.md": 2369, "11-acceptance-checklist-phase-three.md": 3027, "20-threadscan-original-readme.md": 3732, "22-version-3.1-fixes.md": 2659, "20-production-release-guide.md": 2019, "10-vision-api-and-validation-guide.md": 4764, "06-database-and-api-reference.md": 3804, "14-acceptance-checklist-phase-four.md": 3350, "24-style-detection-accuracy-update.md": 11619, "07-operator-workflow.md": 3398, "17-sewing-component-original-readme.md": 8111, "23-size-order-database-fixes.md": 1933, "00-frozen-product-behaviour.md": 9060};
-const ASIZES = {"IT22556370_Thesis_Draft.pdf": 1764508, "IT21255892_Thesis_Draft.pdf": 898531, "Garment-Intelligence-3.1-Presentation.pptx": 503944, "Project_Proposal.docx": 27791, "IT22187796_Thesis_Draft.pdf": 1547690, "Progress_Presentation.pptx": 421324, "IT22627582_Thesis_Draft.pdf": 2072320};
+const ASIZES = {"C3_Research_Paper_Style_Colour.pdf": 407581, "Final_Presentation.pptx": 910752, "IT21255892_Logbook.pdf": 107477, "IT21255892_Planner_Piece_Counting.xlsx": 15693, "IT21255892_Thesis_Draft.pdf": 898531, "IT22187796_Logbook.pdf": 335544, "IT22187796_Planner_Size_Measurement.xlsx": 33486, "IT22187796_Thesis_Draft.pdf": 1547690, "IT22556370_Logbook.pdf": 371065, "IT22556370_Planner_Style_Colour.xlsx": 41911, "IT22556370_Thesis_Draft.pdf": 1764508, "IT22627582_Logbook.pdf": 91427, "IT22627582_Planner_Rework_Handling.xlsx": 57958, "IT22627582_Thesis_Draft.pdf": 2072320, "PP1_Presentation.pptx": 12102127, "PP2_Presentation.pptx": 503944, "Progress_Presentation.pptx": 421324, "Project_Proposal.docx": 27791, "R26-IT-054_Common_Integrated_Solution_Report.pdf": 2560317, "Topic_Assessment_Form_TAF.docx": 351603};
 const kb = n => n < 1024 ? n + " B" : n < 1048576 ? (n/1024).toFixed(1) + " KB" : (n/1048576).toFixed(1) + " MB";
-const dlCell = p => `<td class="act"><a class="btn sm" href="${p}" download>Download</a></td>`;
-document.getElementById("acadlist").innerHTML = ACAD.map(d=>`<tr><td><b>${d[1]}</b><br><code>${d[0]}</code></td><td>${d[2]}</td><td class="num">${kb(ASIZES[d[0]]||0)}</td>${dlCell("files/"+d[0])}</tr>`).join("");
-document.getElementById("doclist").innerHTML = DOCS.map(d=>`<tr><td><code>${d[0]}</code></td><td>${d[1]}</td><td class="num">${kb(SIZES[d[0]]||0)}</td>${dlCell("docs/"+d[0])}</tr>`).join("");
+const dlCell = (p) => `<td class="act"><a class="btn sm" href="${p}" download>Download</a></td>`;
+const docRow = d => `<tr><td><b>${d[1]}</b><br><code>${d[0]}</code></td><td>${d[2]}</td><td class="num">${kb(ASIZES[d[0]]||0)}</td>${dlCell("files/"+d[0],d[3])}</tr>`;
+document.getElementById("docgroups").innerHTML = DOCGROUPS.map(([h,rows])=>`<div class="stack"><h3>${h}</h3><div class="tbl"><table><thead><tr><th>Document</th><th>Details</th><th class="num">Size</th><th></th></tr></thead><tbody>${rows.map(docRow).join("")}</tbody></table></div></div>`).join("");
 
 /* copy email */
 document.addEventListener("click",e=>{const b=e.target.closest(".copy");if(!b)return;e.preventDefault();e.stopPropagation();
